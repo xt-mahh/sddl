@@ -2,7 +2,9 @@
 
 # 🔄 SDDL — Spec-Driven Development Loop
 
-**以结构化 Spec 为单一事实来源的双 Loop 开发方法论**
+**Agent Skill：以结构化 Spec 为单一事实来源的双 Loop 开发方法论**
+
+> 让 AI 编程从"对话驱动"升级为"规格驱动"——先定义清楚做什么，再动手写代码。
 
 ![SDDL Logo](assets/logo.png)
 
@@ -23,7 +25,7 @@
 - [双 Loop 架构](#双-loop-架构)
 - [核心特性](#核心特性)
 - [快速开始](#快速开始)
-- [与 Hermes Agent Skill 集成](#与-hermes-agent-skill-集成)
+- [Skill 结构](#skill-结构)
 - [项目结构](#项目结构)
 - [方法论核心](#方法论核心简述)
 - [证据基础](#证据基础)
@@ -75,23 +77,43 @@ AI 编程时代的三个核心痛点：
 | **预算控制** | 形成/实现/修订三预算，量化降级路径，修订激励不惩罚诚实 |
 | **可审计** | 每个决策点确认记录、每次修订 CHANGELOG、每次检查报告 JSON，全程可追溯 |
 
-## 快速开始
+## 快速开始（Agent 集成）
+
+### 方式 A：安装为 Agent Skill（推荐）
+
+本项目的核心交付是 **Hermes Agent Skill**（位于 [`hermes-skill/`](hermes-skill/)），装好后 agent 就有了 8 个分阶段命令：
 
 ```bash
-# 1. 克隆
-git clone https://github.com/xt-mahh/sddl.git
-cd sddl
+# 1. 把 skill 装进 agent
+cp -r hermes-skill/sddl ~/.hermes/skills/software-development/sddl
 
-# 2. 运行检查器（需要 PyYAML）
+# 2. 在对话中触发（自动加载，或显式命令）
+/sddl:init        # 初始化项目（建目录结构）
+/sddl:interview   # 分层需求访谈
+/sddl:spec        # 生成 Spec 草稿 + 决策点标记
+/sddl:confirm     # 决策点 clarify 确认（含自定义输入）
+/sddl:freeze      # SQC 检查 + 冻结
+/sddl:derive      # 从 spec 派生 tests/code/docs
+/sddl:verify      # C1-C4 一致性检查 + 收敛判定
+/sddl:archive     # 变更归档
+```
+
+**完整工作流**：`/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
+
+### 方式 B：只用检查器脚本（无 agent 环境）
+
+如果不用 Hermes，检查器脚本也可以独立运行（作为 CI 门禁或手动检查）：
+
+```bash
 pip install pyyaml
 
-# 3. SQC 检查（spec 冻结前）
+# SQC 检查（spec 冻结前）
 python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
-# 4. C1-C4 一致性检查（verify 时）
+# C1-C4 一致性检查（verify 时）
 python3 scripts/check_c1_c4.py . --verbose
 
-# 5. 状态恢复（中断后）
+# 状态恢复（中断后）
 python3 scripts/sddl_status.py .
 ```
 
@@ -119,19 +141,19 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
 
 完整示例见 [`examples/accounting/`](examples/accounting/)——一个从"帮我做个记账小程序"到收敛交付的完整项目（含 spec、决策点确认、SQC/C1-C4 报告、变更记录）。
 
-## 与 Hermes Agent Skill 集成
+## Skill 结构
 
 本项目的 Skill 化版本位于 [`hermes-skill/`](hermes-skill/)：
 
 ```
 hermes-skill/sddl/
 ├── SKILL.md                     主入口 + 8 个分阶段命令
-├── references/ (5个)            渐进披露手册
-├── scripts/ (3个)               ← 与根目录 scripts/ 相同
+├── references/ (5个)            渐进披露手册（按需加载，不一次全读）
+├── scripts/ (3个)               检查器（与根目录 scripts/ 相同）
 └── templates/ (2个)             spec 骨架 + 决策点摘要
 ```
 
-安装：将 `hermes-skill/sddl/` 复制到 `~/.hermes/skills/software-development/`，即可在 Hermes Agent 中使用 `/sddl:init` `/sddl:interview` `/sddl:spec` `/sddl:confirm` `/sddl:freeze` `/sddl:derive` `/sddl:verify` `/sddl:archive` 分阶段命令。
+**为什么是 skill 而非普通工具**：SDDL 的 8 个命令是**对话式交互流程**（访谈、clarify 确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
 
 ## 项目结构
 
