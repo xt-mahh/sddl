@@ -147,8 +147,8 @@ class _Store:
         self.budgets: Dict[str, Budget] = {}
         self.expenses: Dict[str, Expense] = {}
         self.users: Dict[str, dict] = {
-            "admin1": {"password": "secret123", "role": "admin"},
-            "user1": {"password": "secret123", "role": "user"},
+            "admin1": {"password": "CHANGE_ME_PASSWORD", "role": "admin"},
+            "user1": {"password": "CHANGE_ME_PASSWORD", "role": "user"},
         }
         self.login_failures: Dict[str, int] = {}
         self.locked_until: Dict[str, datetime] = {}

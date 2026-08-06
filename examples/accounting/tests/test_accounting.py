@@ -170,7 +170,7 @@ def test_approveExpense_non_admin():
 # ============================================================
 @pytest.mark.behavior("B012")
 def test_login_valid():
-    auth = login("admin1", "secret123")
+    auth = login("admin1", "CHANGE_ME_PASSWORD")
     assert auth.role == "admin"
     assert auth.token != ""
 

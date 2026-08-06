@@ -9,12 +9,26 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![PyYAML](https://img.shields.io/badge/PyYAML-required-green.svg)](https://pyyaml.org/)
+[![GitHub stars](https://img.shields.io/github/stars/xt-mahh/sddl)](https://github.com/xt-mahh/sddl)
 
 *先定义清楚做什么，再动手写代码。*
 
 </div>
 
 ---
+
+## 目录
+
+- [为什么需要 SDDL？](#为什么需要-sddl)
+- [双 Loop 架构](#双-loop-架构)
+- [核心特性](#核心特性)
+- [快速开始](#快速开始)
+- [与 Hermes Agent Skill 集成](#与-hermes-agent-skill-集成)
+- [项目结构](#项目结构)
+- [方法论核心](#方法论核心简述)
+- [证据基础](#证据基础)
+- [适用门槛](#适用门槛)
+- [License](#license)
 
 ## 为什么需要 SDDL？
 
@@ -65,7 +79,7 @@ AI 编程时代的三个核心痛点：
 
 ```bash
 # 1. 克隆
-git clone https://github.com/<your-username>/sddl.git
+git clone https://github.com/xt-mahh/sddl.git
 cd sddl
 
 # 2. 运行检查器（需要 PyYAML）
@@ -79,6 +93,28 @@ python3 scripts/check_c1_c4.py . --verbose
 
 # 5. 状态恢复（中断后）
 python3 scripts/sddl_status.py .
+```
+
+示例输出：
+
+```bash
+$ python3 scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
+SQC [0.1.1]: ✅ PASS
+  ✅ def-schema
+  ✅ def-refs
+  ✅ def-assertability
+  ✅ def-dp
+  ✅ sem-coverage
+  ✅ sem-contradiction
+  ✅ sem-testability
+
+$ python3 scripts/check_c1_c4.py . --verbose
+C1-C4 [accounting v0.1.1]: ✅ CONVERGED
+  ✅ c1_def
+  ✅ c2_def
+  ✅ c3
+  ✅ c4b_def
+  soft: c1_sem=1.0 c2_sem=1.0 c4a=1.0 c4b_sem=1.0 must=1.0
 ```
 
 完整示例见 [`examples/accounting/`](examples/accounting/)——一个从"帮我做个记账小程序"到收敛交付的完整项目（含 spec、决策点确认、SQC/C1-C4 报告、变更记录）。
@@ -115,7 +151,7 @@ sddl/
 ├── examples/                    完整示例项目
 │   └── accounting/              记账/对账服务（从零到收敛）
 ├── hermes-skill/                Hermes Agent Skill 版
-├── docs/                        方案文档（v1.0/v1.1）
+├── docs/                        最终方案（v1.1）
 └── LICENSE
 ```
 
@@ -183,4 +219,4 @@ MIT License — 见 [LICENSE](LICENSE)
 ## 致谢
 
 - 方法论经过 3 轮评审循环（35 个问题关闭）+ 2 轮文献验证（arXiv 17 篇 + OpenSpec 实践）
-- Hermes Agent Skill 化版本经过真实项目 T1-T7 测试用例验证
+- Hermes Agent Skill 化版本经过 8 个分阶段命令 + 7 个测试场景验证
