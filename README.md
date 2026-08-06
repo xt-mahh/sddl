@@ -2,7 +2,7 @@
 
 # 🔄 SDDL — Spec-Driven Development Loop
 
-**Agent Skill：以结构化 Spec 为单一事实来源的双 Loop 开发方法论**
+**以结构化 Spec 为单一事实来源的双 Loop 开发方法论（Agent Skill）**
 
 > 让 AI 编程从"对话驱动"升级为"规格驱动"——先定义清楚做什么，再动手写代码。
 
@@ -26,6 +26,7 @@
 - [核心特性](#核心特性)
 - [快速开始](#快速开始)
 - [Skill 结构](#skill-结构)
+- [多平台支持](#多平台支持)
 - [项目结构](#项目结构)
 - [方法论核心](#方法论核心简述)
 - [证据基础](#证据基础)
@@ -81,11 +82,14 @@ AI 编程时代的三个核心痛点：
 
 ### 方式 A：安装为 Agent Skill（推荐）
 
-本项目的核心交付是 **Hermes Agent Skill**（位于 [`hermes-skill/`](hermes-skill/)），装好后 agent 就有了 8 个分阶段命令：
+本项目的核心交付是 **Agent Skill**（位于 [`integrations/`](integrations/)），装好后 agent 就有了 8 个分阶段命令：
 
 ```bash
 # 1. 把 skill 装进 agent
-cp -r hermes-skill/sddl ~/.hermes/skills/software-development/sddl
+# Hermes:
+cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
+
+# 其他 agent（Claude Code / OpenCode / OpenClaw）：见下方「多平台支持」
 
 # 2. 在对话中触发（自动加载，或显式命令）
 /sddl:init        # 初始化项目（建目录结构）
@@ -143,17 +147,37 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
 
 ## Skill 结构
 
-本项目的 Skill 化版本位于 [`hermes-skill/`](hermes-skill/)：
+本项目的 Skill 化版本位于 [`integrations/`](integrations/)：
 
 ```
-hermes-skill/sddl/
-├── SKILL.md                     主入口 + 8 个分阶段命令
-├── references/ (5个)            渐进披露手册（按需加载，不一次全读）
-├── scripts/ (3个)               检查器（与根目录 scripts/ 相同）
-└── templates/ (2个)             spec 骨架 + 决策点摘要
+integrations/
+├── hermes/                      Hermes Agent Skill（完整版）
+│   ├── SKILL.md                 主入口 + 8 个分阶段命令
+│   ├── references/ (5个)        渐进披露手册（按需加载，不一次全读）
+│   ├── scripts/ (3个)           检查器（与根目录 scripts/ 相同）
+│   └── templates/ (2个)         spec 骨架 + 决策点摘要
+├── claude-code/                 （规划中）
+└── opencode/                    （规划中）
 ```
 
-**为什么是 skill 而非普通工具**：SDDL 的 8 个命令是**对话式交互流程**（访谈、clarify 确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
+**为什么是 skill 而非普通工具**：SDDL 的 8 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
+
+## 多平台支持
+
+SDDL 的**方法论核心是平台无关的**——`references/`（方法论手册）、`scripts/`（检查器）、`templates/`（模板）不依赖任何具体 agent：
+
+| 组件 | 平台依赖 | 说明 |
+|------|---------|------|
+| `references/` 方法论手册 | ❌ 无 | 纯 Markdown，任何 agent 都能读 |
+| `scripts/` 检查器 | ❌ 无 | 纯 Python CLI，任何环境都能跑 |
+| `templates/` 模板 | ❌ 无 | 纯 YAML/Markdown |
+| `integrations/hermes/` | ✅ Hermes | 利用 Hermes 的 skill/斜杠命令/clarify 机制 |
+| `integrations/claude-code/` | ✅ Claude Code | 规划中（利用 CLAUDE.md + slash command） |
+| `integrations/opencode/` | ✅ OpenCode | 规划中（利用 AGENTS.md） |
+
+**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 8 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `integrations/hermes/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
+
+---
 
 ## 项目结构
 
@@ -172,7 +196,7 @@ sddl/
 ├── templates/                   spec 骨架 + 决策点摘要模板
 ├── examples/                    完整示例项目
 │   └── accounting/              记账/对账服务（从零到收敛）
-├── hermes-skill/                Hermes Agent Skill 版
+├── integrations/                各平台 Agent 适配器（Hermes 已完成，Claude Code/OpenCode 规划中）
 ├── docs/                        最终方案（v1.1）
 └── LICENSE
 ```
