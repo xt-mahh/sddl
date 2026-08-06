@@ -1,0 +1,409 @@
+# ============================================================
+# 记账/对账系统 Spec 草稿 v0.1.0
+# 领域: accounting (客户对账/结算 + 预算/报销)
+# 状态: reviewing（待 SQC + 决策点确认）
+# ============================================================
+meta:
+  id: "accounting-service"
+  version: "0.1.1"
+  domain: "accounting"
+  status: "frozen"
+  dependencies: []
+
+# ------------------------------------------------------------
+# 非目标（防 scope creep）
+# ------------------------------------------------------------
+non_goals:
+  - "不负责银行/支付网关直连（结算标记为手动确认）"
+  - "不做发票开具"
+  - "不做多币种支持"
+
+# ------------------------------------------------------------
+# 决策点登记（模糊处必须标记，不静默决定）
+# ------------------------------------------------------------
+decision_points:
+  - id: "DP-001"
+    topic: "结算方式"
+    default: "手动标记结算状态"
+    alternatives: ["手动标记", "对接支付网关自动确认"]
+    rationale: "需求未明确结算对接；手动标记最简单可靠，对接网关需外部依赖"
+    category: "behavior"
+    requires_confirmation: true
+    status: "confirmed"
+  - id: "DP-002"
+    topic: "预算周期"
+    default: "月度"
+    alternatives: ["月度", "季度", "自定义周期"]
+    rationale: "需求未明确预算周期；月度最常见"
+    category: "behavior"
+    requires_confirmation: true
+    status: "confirmed"
+  - id: "DP-003"
+    topic: "审批流层级"
+    default: "单级（管理员审批）"
+    alternatives: ["单级", "多级（部门→财务）"]
+    rationale: "需求未明确审批层级；单级最简，多级适合更大组织"
+    category: "behavior"
+    requires_confirmation: true
+    status: "confirmed"
+  - id: "DP-004"
+    topic: "租户隔离方式"
+    default: "共享库 + tenant_id 字段隔离"
+    alternatives: ["共享库+tenant_id", "独立数据库 per 客户"]
+    rationale: "轻量数据量（每月几百笔），共享库足够；独立库成本高"
+    category: "implementation"
+    requires_confirmation: false
+    status: "delegated"
+  - id: "DP-005"
+    topic: "差异判定标准"
+    default: "应收金额与实收金额不符（entry 的 expected_amount != actual_amount）"
+    alternatives: ["应收 vs 实收不符", "金额 ≤ 0 即差异", "日期缺失/重复即差异"]
+    rationale: "真实对账业务：差异 = 应收与实收不符；≤0 金额是实现时的简化，非业务定义"
+    category: "behavior"
+    requires_confirmation: true
+    status: "confirmed"
+
+# ------------------------------------------------------------
+# L1 接口契约
+# ------------------------------------------------------------
+interfaces:
+  - name: "createReconciliation"
+    signature:
+      params:
+        - { name: "customer_id", type: "string", required: true }
+        - { name: "period", type: "string", required: true }
+        - { name: "entries", type: "array<LedgerEntry>", required: true }
+      returns: { type: "Reconciliation" }
+    errors: ["InvalidPeriodError", "DuplicateEntryError", "CustomerNotFoundError"]
+
+  - name: "detectDiscrepancy"
+    signature:
+      params:
+        - { name: "reconciliation_id", type: "string", required: true }
+      returns: { type: "DiscrepancyReport" }
+    errors: ["ReconciliationNotFoundError"]
+
+  - name: "settle"
+    signature:
+      params:
+        - { name: "reconciliation_id", type: "string", required: true }
+        - { name: "settled_by", type: "string", required: true }
+      returns: { type: "SettlementResult" }
+    errors: ["ReconciliationNotFoundError", "UnresolvedDiscrepancyError", "AlreadySettledError"]
+
+  - name: "createBudget"
+    signature:
+      params:
+        - { name: "customer_id", type: "string", required: true }
+        - { name: "period", type: "string", required: true }
+        - { name: "amount", type: "number", required: true }
+      returns: { type: "Budget" }
+    errors: ["InvalidPeriodError", "InvalidAmountError"]
+
+  - name: "submitExpense"
+    signature:
+      params:
+        - { name: "customer_id", type: "string", required: true }
+        - { name: "amount", type: "number", required: true }
+        - { name: "category", type: "string", required: true }
+        - { name: "description", type: "string", required: false }
+      returns: { type: "Expense" }
+    errors: ["InvalidAmountError", "BudgetExceededError", "CustomerNotFoundError"]
+
+  - name: "approveExpense"
+    signature:
+      params:
+        - { name: "expense_id", type: "string", required: true }
+        - { name: "approver", type: "string", required: true }
+      returns: { type: "Expense" }
+    errors: ["ExpenseNotFoundError", "UnauthorizedError", "AlreadyApprovedError"]
+
+  - name: "login"
+    signature:
+      params:
+        - { name: "username", type: "string", required: true }
+        - { name: "password", type: "string", required: true }
+      returns: { type: "AuthResult" }
+    errors: ["InvalidCredentialsError", "AccountLockedError"]
+
+# ------------------------------------------------------------
+# L2 数据模型
+# ------------------------------------------------------------
+data_models:
+  - name: "LedgerEntry"
+    schema:
+      type: "object"
+      properties:
+        entry_id: { type: "string" }
+        date: { type: "string", format: "date" }
+        amount: { type: "number", exclusiveMinimum: 0 }
+        description: { type: "string" }
+      required: ["entry_id", "date", "amount"]
+
+  - name: "Reconciliation"
+    schema:
+      type: "object"
+      properties:
+        reconciliation_id: { type: "string" }
+        customer_id: { type: "string" }
+        period: { type: "string" }
+        entries: { type: "array", items: { "$ref": "LedgerEntry" } }
+        total_amount: { type: "number", minimum: 0 }
+        status: { enum: ["draft", "discrepancy", "settled"] }
+      required: ["reconciliation_id", "customer_id", "period", "entries", "status"]
+
+  - name: "DiscrepancyReport"
+    schema:
+      type: "object"
+      properties:
+        reconciliation_id: { type: "string" }
+        has_discrepancy: { type: "boolean" }
+        differences: { type: "array", items: { type: "object" } }
+        summary: { type: "string" }
+      required: ["reconciliation_id", "has_discrepancy"]
+
+  - name: "SettlementResult"
+    schema:
+      type: "object"
+      properties:
+        reconciliation_id: { type: "string" }
+        settled_at: { type: "string", format: "date-time" }
+        settled_by: { type: "string" }
+      required: ["reconciliation_id", "settled_at", "settled_by"]
+
+  - name: "Budget"
+    schema:
+      type: "object"
+      properties:
+        budget_id: { type: "string" }
+        customer_id: { type: "string" }
+        period: { type: "string" }
+        amount: { type: "number", minimum: 0 }
+        used_amount: { type: "number", minimum: 0 }
+      required: ["budget_id", "customer_id", "period", "amount"]
+
+  - name: "Expense"
+    schema:
+      type: "object"
+      properties:
+        expense_id: { type: "string" }
+        customer_id: { type: "string" }
+        amount: { type: "number", exclusiveMinimum: 0 }
+        category: { type: "string" }
+        description: { type: "string" }
+        status: { enum: ["pending", "approved", "rejected"] }
+      required: ["expense_id", "customer_id", "amount", "category", "status"]
+
+  - name: "AuthResult"
+    schema:
+      type: "object"
+      properties:
+        user_id: { type: "string" }
+        role: { enum: ["admin", "user"] }
+        token: { type: "string" }
+      required: ["user_id", "role", "token"]
+
+# ------------------------------------------------------------
+# L3 行为描述（GWT + 优先级）
+# ------------------------------------------------------------
+behaviors:
+  - id: "B001"
+    interface: "createReconciliation"
+    priority: "must"
+    scenario: "valid reconciliation"
+    given: "客户存在，period 格式 YYYY-MM，entries 非空"
+    when: "调用 createReconciliation(customer_id, period, entries)"
+    then:
+      - "返回 Reconciliation，status=draft，total_amount=entries 金额合计"
+      - "entries 全部存在"
+    acceptance: true
+
+  - id: "B002"
+    interface: "createReconciliation"
+    priority: "must"
+    scenario: "duplicate entry"
+    given: "entries 中存在相同 entry_id"
+    when: "调用 createReconciliation"
+    then:
+      - "抛出 DuplicateEntryError"
+      - "Reconciliation 记录数不增加（0 条新记录）"
+    acceptance: true
+
+  - id: "B003"
+    interface: "detectDiscrepancy"
+    priority: "must"
+    scenario: "no discrepancy"
+    given: "Reconciliation 存在且 entries 平衡"
+    when: "调用 detectDiscrepancy(reconciliation_id)"
+    then:
+      - "返回 DiscrepancyReport，has_discrepancy=false"
+      - "differences 为空数组"
+    acceptance: true
+
+  - id: "B004"
+    interface: "detectDiscrepancy"
+    priority: "must"
+    scenario: "discrepancy found"
+    given: "Reconciliation 存在且存在差异条目（按 DP-005 判定标准：应收金额与实收金额不符）"
+    when: "调用 detectDiscrepancy(reconciliation_id)"
+    then:
+      - "返回 DiscrepancyReport，has_discrepancy=true"
+      - "differences 包含差异条目（含 entry_id 与差异原因）"
+    acceptance: true
+
+  - id: "B005"
+    interface: "settle"
+    priority: "must"
+    scenario: "settle with no discrepancy"
+    given: "Reconciliation 存在，status=draft，无未解决差异"
+    when: "调用 settle(reconciliation_id, settled_by)"
+    then:
+      - "返回 SettlementResult，settled_by=参数值"
+      - "Reconciliation.status 变为 settled"
+    acceptance: true
+
+  - id: "B006"
+    interface: "settle"
+    priority: "must"
+    scenario: "settle with unresolved discrepancy"
+    given: "Reconciliation 存在且有未解决差异"
+    when: "调用 settle(reconciliation_id, settled_by)"
+    then:
+      - "抛出 UnresolvedDiscrepancyError"
+      - "Reconciliation.status 保持 draft"
+    acceptance: true
+
+  - id: "B007"
+    interface: "createBudget"
+    priority: "should"
+    scenario: "valid budget"
+    given: "客户存在，period 格式 YYYY-MM，amount>0"
+    when: "调用 createBudget(customer_id, period, amount)"
+    then:
+      - "返回 Budget，used_amount=0"
+    acceptance: true
+
+  - id: "B008"
+    interface: "submitExpense"
+    priority: "should"
+    scenario: "expense within budget"
+    given: "Budget 存在，amount 未超预算"
+    when: "调用 submitExpense"
+    then:
+      - "返回 Expense，status=pending"
+      - "Budget.used_amount 增加 amount"
+    acceptance: true
+
+  - id: "B009"
+    interface: "submitExpense"
+    priority: "should"
+    scenario: "expense exceeds budget"
+    given: "Budget 存在，amount 超预算"
+    when: "调用 submitExpense"
+    then:
+      - "抛出 BudgetExceededError"
+      - "Expense 记录数不增加（0 条新记录）"
+    acceptance: true
+
+  - id: "B010"
+    interface: "approveExpense"
+    priority: "should"
+    scenario: "admin approves"
+    given: "Expense 存在，status=pending，approver 是 admin"
+    when: "调用 approveExpense(expense_id, approver)"
+    then:
+      - "返回 Expense，status=approved"
+    acceptance: true
+
+  - id: "B011"
+    interface: "approveExpense"
+    priority: "should"
+    scenario: "non-admin tries to approve"
+    given: "Expense 存在，approver 不是 admin"
+    when: "调用 approveExpense(expense_id, approver)"
+    then:
+      - "抛出 UnauthorizedError"
+      - "Expense.status 保持 pending"
+    acceptance: true
+
+  - id: "B012"
+    interface: "login"
+    priority: "must"
+    scenario: "valid credentials"
+    given: "用户存在且密码匹配"
+    when: "调用 login(username, password)"
+    then:
+      - "返回 AuthResult，role 与用户角色一致"
+      - "token 非空"
+    acceptance: true
+
+  - id: "B013"
+    interface: "login"
+    priority: "must"
+    scenario: "invalid credentials"
+    given: "密码不匹配"
+    when: "调用 login(username, wrong_password)"
+    then:
+      - "抛出 InvalidCredentialsError"
+    acceptance: true
+
+# ------------------------------------------------------------
+# L4 边界条件
+# ------------------------------------------------------------
+boundaries:
+  - condition: "createReconciliation / createBudget 时 period 格式非法（非 YYYY-MM）"
+    expectation: "抛出 InvalidPeriodError，不创建记录"
+    priority: "must"
+
+  - condition: "createReconciliation / submitExpense 时 customer_id 不存在"
+    expectation: "抛出 CustomerNotFoundError，不创建记录"
+    priority: "must"
+
+  - condition: "createBudget / submitExpense 时 amount <= 0"
+    expectation: "抛出 InvalidAmountError，不创建记录"
+    priority: "must"
+
+  - condition: "approveExpense 时 expense_id 不存在"
+    expectation: "抛出 ExpenseNotFoundError"
+    priority: "must"
+
+  - condition: "approveExpense 时 expense 已 approved"
+    expectation: "抛出 AlreadyApprovedError，状态不改变"
+    priority: "must"
+
+  - condition: "settle 调用时 Reconciliation 已 settled"
+    expectation: "抛出 AlreadySettledError，不重复结算"
+    priority: "must"
+
+  - condition: "settle 调用时 Reconciliation 不存在"
+    expectation: "抛出 ReconciliationNotFoundError"
+    priority: "must"
+
+  - condition: "detectDiscrepancy 时 Reconciliation 不存在"
+    expectation: "抛出 ReconciliationNotFoundError"
+    priority: "must"
+
+  - condition: "连续 5 次登录失败"
+    expectation: "抛出 AccountLockedError，锁定 300 秒"
+    priority: "should"
+
+  - condition: "并发 100 次 settle 同一 reconciliation"
+    expectation: "只有 1 次生效，其余抛 AlreadySettledError，无数据竞争"
+    priority: "should"
+
+# ------------------------------------------------------------
+# L5 质量约束
+# ------------------------------------------------------------
+quality_constraints:
+  performance:
+    - metric: "P99 latency"
+      threshold: "800ms"
+      scope: "detectDiscrepancy"
+      verification: "env"
+      priority: "should"
+  security:
+    - "密码不以明文存储或记录到日志"
+    - "租户数据隔离：用户只能访问自己 tenant_id 的数据"
+  observability:
+    - "settle 操作记录 audit log（操作人、时间、reconciliation_id）"
+    - "登录失败记录日志（不含密码）"

@@ -1,0 +1,4 @@
+spec_status: frozen
+current_phase: derivation
+budget: { formation: 40%, implementation: 30%, revision: 90% }
+last_check: { type: l2_revision, spec: accounting-v0.1.1, result: re_frozen, at: 2026-08-06T17:15 }

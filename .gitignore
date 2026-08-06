@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 环境
+.env
+.venv/
+venv/
+
+# SDDL 运行产物（检查报告是机器生成的，不入库）
+**/checks/*.json
+
+# 编辑器
+.vscode/
+.idea/
+*.swp

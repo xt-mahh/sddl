@@ -1,0 +1,64 @@
+# Spec 模板（骨架）
+# 用 /sddl:spec 生成 spec 时以此为骨架。
+# 字段说明见 references/spec-schema.md。
+# 决策点标记是必须的——模糊处不静默决定。
+
+meta:
+  id: ""                 # 必填：如 "auth-service"
+  version: "0.1.0"
+  domain: ""             # 必填：领域名（= specs/ 下目录名）
+  status: "reviewing"    # interviewing | drafting | reviewing | frozen | evolved
+  dependencies: []       # 可选：["user-model@>=1.0"]
+
+non_goals:               # 非目标（防 scope creep）
+  - ""
+
+decision_points:         # 决策点登记（模糊处必须登记）
+  # - id: "DP-001"
+  #   topic: ""
+  #   default: ""
+  #   alternatives: []
+  #   rationale: ""
+  #   category: "contract"    # contract | behavior | constraint | implementation
+  #   requires_confirmation: true
+  #   status: "pending"       # pending | confirmed | modified | delegated
+
+interfaces:              # L1 接口契约
+  # - name: ""
+  #   signature:
+  #     params:
+  #       - { name: "", type: "", required: true }
+  #     returns: { type: "" }
+  #   errors: []
+
+data_models:             # L2 数据模型（JSON Schema）
+  # - name: ""
+  #   schema:
+  #     type: "object"
+  #     properties: {}
+  #     required: []
+
+behaviors:               # L3 行为描述（GWT + 优先级）
+  # - id: "B001"
+  #   interface: ""       # 引用 interfaces 的 name
+  #   priority: "must"    # must | should | could | wont
+  #   scenario: ""
+  #   given: ""
+  #   when: ""
+  #   then: []            # 可断言结果；可引用决策点 "expires_in 按 DP-001"
+  #   acceptance: true
+
+boundaries:              # L4 边界条件
+  # - condition: ""
+  #   expectation: ""
+  #   priority: "must"
+
+quality_constraints:     # L5 质量约束（无则写 {}）
+  # performance:
+  #   - metric: ""
+  #     threshold: ""
+  #     scope: ""
+  #     verification: "env"
+  #     priority: "should"
+  # security: []
+  # observability: []

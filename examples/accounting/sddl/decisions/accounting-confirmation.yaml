@@ -1,0 +1,11 @@
+confirmation_record:
+  spec_version: "0.1.0"
+  domain: "accounting"
+  confirmed_by: "用户"
+  confirmed_at: "2026-08-06T16:35:00Z"
+  decisions:
+    - { id: "DP-001", result: "confirmed", value: "手动标记结算状态", category: "behavior" }
+    - { id: "DP-002", result: "confirmed", value: "月度", category: "behavior" }
+    - { id: "DP-003", result: "confirmed", value: "单级（管理员审批）", category: "behavior" }
+    - { id: "DP-004", result: "delegated", value: "共享库+tenant_id（AI 决定）", category: "implementation" }
+  overall: "approved"

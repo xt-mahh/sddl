@@ -1,0 +1,9 @@
+confirmation_record:
+  spec_version: "0.1.1"
+  domain: "accounting"
+  confirmed_by: "用户"
+  confirmed_at: "2026-08-06T17:10:00Z"
+  change: "L2 修订：定义差异判定标准（spec_gap 修复）"
+  affected_decision_points:
+    - { id: "DP-005", result: "confirmed", value: "应收 vs 实收不符", category: "behavior" }
+  overall: "approved"
