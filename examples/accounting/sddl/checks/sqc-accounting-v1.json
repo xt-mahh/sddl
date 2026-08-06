@@ -1,0 +1,25 @@
+{
+  "check_type": "sqc",
+  "spec_version": "0.1.0",
+  "domain": "accounting",
+  "def": {
+    "schema_ok": true,
+    "refs_ok": true,
+    "assertability": {
+      "pass": true,
+      "warnings": []
+    },
+    "dp_ok": true,
+    "note": "SQC-def-2 首轮发现 8 个未覆盖错误类型，已补 5 个边界场景修复"
+  },
+  "sem": {
+    "coverage": "PASS",
+    "contradiction": "PASS",
+    "gap": "PASS",
+    "testability": "PASS",
+    "note": "需求场景匹配用启发式规则有误报，实际 interface 命名含 createReconciliation 等；B002/B009 THEN 已补可断言方式"
+  },
+  "verdict": "pass",
+  "blockers": [],
+  "checked_at": "2026-08-06T16:40:00Z"
+}

@@ -25,6 +25,7 @@
 - [Dual-Loop Architecture](#dual-loop-architecture)
 - [Core Features](#core-features)
 - [Quick Start (Agent Integration)](#quick-start-agent-integration)
+- [Skill Structure](#skill-structure)
 - [Multi-Platform Support](#multi-platform-support)
 - [Project Structure](#project-structure)
 - [Methodology Core](#methodology-core)
@@ -149,6 +150,23 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
 ```
 
 A complete example is in [`examples/accounting/`](examples/accounting/) — a full project from "build me a bookkeeping app" to converged delivery (including spec, decision-point confirmations, SQC/C1-C4 reports, and change history).
+
+## Skill Structure
+
+The Skill version lives in [`integrations/`](integrations/):
+
+```
+integrations/
+├── hermes/                      Hermes Agent Skill (complete)
+│   ├── SKILL.md                 Main entry + 8 staged commands
+│   ├── references/ (5)          Progressive-disclosure guides (loaded on demand, not all at once)
+│   ├── scripts/ (3)             Checkers (identical to root scripts/)
+│   └── templates/ (2)           Spec skeleton + decision summary
+├── claude-code/                 (planned)
+└── opencode/                    (planned)
+```
+
+**Why a skill rather than a plain tool**: SDDL's 8 commands are **conversational interaction flows** (interview, confirmation, check reports) — not something a pure CLI can express. The skill lets the agent execute this workflow directly, with humans stepping in only at key checkpoints (decision-point confirmation, freeze approval).
 
 ## Multi-Platform Support
 

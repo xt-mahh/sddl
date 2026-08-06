@@ -1,0 +1,59 @@
+{
+  "check_type": "c1_c4",
+  "domain": "accounting",
+  "spec_version": "0.1.0",
+  "verdict": "converged",
+  "convergence": {
+    "hard_checks": {
+      "c1_def": {
+        "pass": true,
+        "note": "L1 标签全映射 + L2 结构反推 13/13 + L3 变异测试被杀"
+      },
+      "c2_def": {
+        "pass": true,
+        "note": "7 接口全在 + 无越界 API（next_id 已私有化）"
+      },
+      "c3": {
+        "pass": true,
+        "note": "13 passed"
+      },
+      "c4b_def": {
+        "pass": true,
+        "note": "docs current 分区 API 全部存在于 code"
+      }
+    },
+    "soft_consensus": {
+      "c1_sem": 1.0,
+      "c2_sem": 1.0,
+      "c4a": 1.0,
+      "c4b_sem": 1.0
+    },
+    "must_coverage": 1.0,
+    "blockers": []
+  },
+  "deterministic_evidence": {
+    "reproducible": true,
+    "commands": [
+      "PYTHONPATH=src python3 -m pytest tests/ -q",
+      "python3 checks/run_c1_c4.py"
+    ],
+    "input_hashes": {
+      "spec": "dda0c3fe0b16e828",
+      "code": "65f7803997fd030b",
+      "tests": "7f2ef98b17323b34",
+      "docs": "78744455c039aa83"
+    }
+  },
+  "semantic_evidence": {
+    "method": "semantic heuristic (AST + keyword)",
+    "note": "T1 环境无多模型 LLM 投票，用改进版语义启发式替代；生产环境应走 Checklist 3 模型投票",
+    "checklist_version": "accounting-v0.1.0-c1",
+    "model": "n/a (heuristic)"
+  },
+  "risk_list": [],
+  "env_verification": [
+    "P99 latency < 800ms (detectDiscrepancy)",
+    "并发 settle 100 次无竞争"
+  ],
+  "checked_at": "2026-08-06T17:00:00Z"
+}

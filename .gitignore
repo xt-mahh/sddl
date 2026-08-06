@@ -16,6 +16,8 @@ venv/
 
 # SDDL 运行产物（检查报告是机器生成的，不入库）
 **/checks/*.json
+# 但 examples 里的报告是刻意展示的示例，强制保留
+!examples/**/checks/*.json
 
 # 编辑器
 .vscode/
