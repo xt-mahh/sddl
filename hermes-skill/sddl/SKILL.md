@@ -12,6 +12,9 @@ metadata:
 
 # Spec-Driven Development Loop (SDDL)
 
+> **已开源**：https://github.com/xt-mahh/sddl (2026-08-06, MIT License)
+> 完整方法论 + 检查器脚本 + 示例项目见 GitHub 仓库。
+
 ## Overview
 
 SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**先定义清楚做什么，再动手写代码**——以结构化 Spec 为单一事实来源，双 Loop 闭环保证质量和可审计性。
