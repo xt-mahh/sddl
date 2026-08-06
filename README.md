@@ -2,9 +2,9 @@
 
 # 🔄 SDDL — Spec-Driven Development Loop
 
-**以结构化 Spec 为单一事实来源的双 Loop 开发方法论（Agent Skill）**
+**Agent Skill: A dual-loop development methodology with a structured Spec as the single source of truth**
 
-> 让 AI 编程从"对话驱动"升级为"规格驱动"——先定义清楚做什么，再动手写代码。
+> **Languages:** [English](README.md) | [中文](README_zh.md)
 
 ![SDDL Logo](assets/logo.png)
 
@@ -13,115 +13,120 @@
 [![PyYAML](https://img.shields.io/badge/PyYAML-required-green.svg)](https://pyyaml.org/)
 [![GitHub stars](https://img.shields.io/github/stars/xt-mahh/sddl)](https://github.com/xt-mahh/sddl)
 
-*先定义清楚做什么，再动手写代码。*
+*Define clearly what to build, then write the code.*
 
 </div>
 
 ---
 
-## 目录
+## Table of Contents
 
-- [为什么需要 SDDL？](#为什么需要-sddl)
-- [双 Loop 架构](#双-loop-架构)
-- [核心特性](#核心特性)
-- [快速开始](#快速开始)
-- [Skill 结构](#skill-结构)
-- [多平台支持](#多平台支持)
-- [项目结构](#项目结构)
-- [方法论核心](#方法论核心简述)
-- [证据基础](#证据基础)
-- [适用门槛](#适用门槛)
+- [Why SDDL?](#why-sddl)
+- [Dual-Loop Architecture](#dual-loop-architecture)
+- [Core Features](#core-features)
+- [Quick Start (Agent Integration)](#quick-start-agent-integration)
+- [Multi-Platform Support](#multi-platform-support)
+- [Project Structure](#project-structure)
+- [Methodology Core](#methodology-core)
+- [Evidence Base](#evidence-base)
+- [When to Use](#when-to-use)
 - [License](#license)
 
-## 为什么需要 SDDL？
+---
 
-AI 编程时代的三个核心痛点：
+## Why SDDL?
 
-| 痛点 | 本质 | 后果 |
-|------|------|------|
-| **上下文漂移** | 对话越长，AI 越易遗忘早期约定 | 第 N 轮推翻第 3 轮的接口约定 |
-| **多 artifact 不同步** | 代码改了，测试/文档没跟上 | "文档谎言"被 AI 时代放大 |
-| **验收主观化** | "感觉对了"代替"符合规格" | 无法审计、无法复现、无法交接 |
+Three core pain points of AI-powered programming:
 
-对话式编程的问题在于：**上下文窗口有限，对话越长越容易漂移**。你跟 AI 聊了 50 轮，第 51 轮它已经忘了第 3 轮约定的接口格式。
+| Pain Point | Essence | Consequence |
+|------------|---------|-------------|
+| **Context Drift** | The longer the conversation, the more the AI forgets early agreements | Round 51 overrides the interface contract agreed in Round 3 |
+| **Artifact Desync** | Code changes but tests/docs lag behind | "Documentation lies" amplified in the AI era |
+| **Subjective Acceptance** | "Feels right" replaces "matches spec" | Not auditable, not reproducible, not handover-able |
 
-**SDDL 的答案**：用稳定可全文加载的 Spec 做单一事实来源，用双 Loop 闭环保证质量和可审计性。
+The problem with conversational programming: **context windows are finite, and the longer you chat, the more it drifts**. Chat with an AI for 50 rounds, and by round 51 it has forgotten the interface format agreed in round 3.
 
-## 双 Loop 架构
+**SDDL's answer**: use a stable, fully-loadable Spec as the single source of truth, and guarantee quality and auditability through a dual-loop closed loop.
+
+## Dual-Loop Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   形成 Loop（回答"做什么"）                            │
-│  需求 ──▶ 访谈 ──▶ Spec草稿 ──▶ SQC质量检查 ──▶ 决策点确认 ──▶ 冻结   │
+│                   Formation Loop (answering "what")                  │
+│  Requirements ─▶ Interview ─▶ Spec Draft ─▶ SQC Check ─▶ Decision    │
+│  Points Confirmation ─▶ Freeze                                      │
 └───────────────────────────────────────────────┬─────────────────────┘
                                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                   派生 Loop（回答"怎么做对"）                           │
-│  冻结 Spec ──▶ tests/code/docs ──▶ C1-C4一致性检查 ──▶ 收敛           │
+│                   Derivation Loop (answering "how")                  │
+│  Frozen Spec ─▶ tests/code/docs ─▶ C1-C4 Consistency Checks ─▶      │
+│  Converged                                                          │
 │        ▲                                        │                    │
-│        └──── spec缺陷 ──▶ 解冻回形成Loop ──▶ 重新冻结 ──┘             │
+│        └──── spec defects ─▶ unfreeze ─▶ back to Formation Loop ─┘  │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-- **形成 Loop**：保证"做对的事"——需求 → 访谈 → Spec 草稿（含决策点标记）→ SQC 质量检查 → 决策点人工确认 → 冻结
-- **派生 Loop**：保证"把事做对"——冻结 Spec → tests/code/docs 三件套同步派生 → C1-C4 分层一致性检查 → 收敛
-- **回写通道**：实现中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结（不绕过质量门禁）
+- **Formation Loop**: guarantees "doing the right thing" — requirements → interview → spec draft (with decision-point markers) → SQC quality check → human confirmation of decision points → freeze
+- **Derivation Loop**: guarantees "doing the thing right" — frozen spec → synchronized derivation of tests/code/docs → C1-C4 layered consistency checks → convergence
+- **Write-back channel**: spec defects found during implementation → unfreeze → back to Formation Loop for revision → re-freeze (never bypassing the quality gate)
 
-## 核心特性
+## Core Features
 
-| 特性 | 说明 |
-|------|------|
-| **决策点机制** | 模糊处 AI 不静默决定，标记为决策点，用户用 clarify 逐项确认（含自定义输入） |
-| **SQC 质量检查** | Spec 自身的质量门禁：schema 合法/引用完整/可断言性/行为覆盖/矛盾检测 |
-| **C1-C4 分层检查** | artifacts 与 spec 的一致性：验收覆盖（含变异测试反推）/接口对比/测试执行/文档符号表 |
-| **目录即状态** | 进度编码在目录结构里，中断恢复免费（配合 git commit 作为 checkpoint） |
-| **预算控制** | 形成/实现/修订三预算，量化降级路径，修订激励不惩罚诚实 |
-| **可审计** | 每个决策点确认记录、每次修订 CHANGELOG、每次检查报告 JSON，全程可追溯 |
+| Feature | Description |
+|---------|-------------|
+| **Decision Points** | Where requirements are ambiguous, the AI doesn't silently decide — it marks a decision point and the user confirms it via interactive prompts (with custom input support) |
+| **SQC Quality Check** | Quality gate for the spec itself: schema validity / reference integrity / assertability / behavior coverage / contradiction detection |
+| **C1-C4 Layered Checks** | Consistency between artifacts and spec: acceptance coverage (incl. mutation-testing reverse verification) / interface comparison / test execution / doc symbol table |
+| **Directory-as-State** | Progress is encoded in directory structure — interruption recovery is free (with git commits as checkpoints) |
+| **Budget Control** | Three budgets (formation/implementation/revision), quantified degradation paths, revision incentives that don't punish honesty |
+| **Auditable** | Every decision-point confirmation record, every revision CHANGELOG, every check report JSON — fully traceable |
 
-## 快速开始（Agent 集成）
+## Quick Start (Agent Integration)
 
-### 方式 A：安装为 Agent Skill（推荐）
+### Option A: Install as an Agent Skill (Recommended)
 
-本项目的核心交付是 **Agent Skill**（位于 [`integrations/`](integrations/)），装好后 agent 就有了 8 个分阶段命令：
+The core deliverable is an **Agent Skill** (in [`integrations/`](integrations/)). Once installed, the agent gains 8 staged commands:
 
 ```bash
-# 1. 把 skill 装进 agent
 # Hermes:
 cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
 
-# 其他 agent（Claude Code / OpenCode / OpenClaw）：见下方「多平台支持」
-
-# 2. 在对话中触发（自动加载，或显式命令）
-/sddl:init        # 初始化项目（建目录结构）
-/sddl:interview   # 分层需求访谈
-/sddl:spec        # 生成 Spec 草稿 + 决策点标记
-/sddl:confirm     # 决策点 clarify 确认（含自定义输入）
-/sddl:freeze      # SQC 检查 + 冻结
-/sddl:derive      # 从 spec 派生 tests/code/docs
-/sddl:verify      # C1-C4 一致性检查 + 收敛判定
-/sddl:archive     # 变更归档
+# Other agents (Claude Code / OpenCode / OpenClaw): see "Multi-Platform Support" below
 ```
 
-**完整工作流**：`/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
+Trigger in conversation (auto-loaded, or explicit commands):
 
-### 方式 B：只用检查器脚本（无 agent 环境）
+```
+/sddl:init        # Initialize project (create directory structure)
+/sddl:interview   # Layered requirements interview
+/sddl:spec        # Generate spec draft + decision-point markers
+/sddl:confirm     # Confirm decision points interactively (with custom input)
+/sddl:freeze      # SQC check + freeze
+/sddl:derive      # Derive tests/code/docs from the spec
+/sddl:verify      # C1-C4 consistency checks + convergence verdict
+/sddl:archive     # Archive changes
+```
 
-如果不用 Hermes，检查器脚本也可以独立运行（作为 CI 门禁或手动检查）：
+**Full workflow**: `/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
+
+### Option B: Use Checker Scripts Only (No Agent Environment)
+
+If you're not using Hermes, the checker scripts run standalone (as CI gates or manual checks):
 
 ```bash
 pip install pyyaml
 
-# SQC 检查（spec 冻结前）
+# SQC check (before spec freeze)
 python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
-# C1-C4 一致性检查（verify 时）
+# C1-C4 consistency check (at verify time)
 python3 scripts/check_c1_c4.py . --verbose
 
-# 状态恢复（中断后）
+# State recovery (after interruption)
 python3 scripts/sddl_status.py .
 ```
 
-示例输出：
+Example output:
 
 ```bash
 $ python3 scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
@@ -143,85 +148,66 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
   soft: c1_sem=1.0 c2_sem=1.0 c4a=1.0 c4b_sem=1.0 must=1.0
 ```
 
-完整示例见 [`examples/accounting/`](examples/accounting/)——一个从"帮我做个记账小程序"到收敛交付的完整项目（含 spec、决策点确认、SQC/C1-C4 报告、变更记录）。
+A complete example is in [`examples/accounting/`](examples/accounting/) — a full project from "build me a bookkeeping app" to converged delivery (including spec, decision-point confirmations, SQC/C1-C4 reports, and change history).
 
-## Skill 结构
+## Multi-Platform Support
 
-本项目的 Skill 化版本位于 [`integrations/`](integrations/)：
+SDDL's **methodology core is platform-agnostic** — `references/` (methodology guides), `scripts/` (checkers), and `templates/` (templates) don't depend on any specific agent:
 
-```
-integrations/
-├── hermes/                      Hermes Agent Skill（完整版）
-│   ├── SKILL.md                 主入口 + 8 个分阶段命令
-│   ├── references/ (5个)        渐进披露手册（按需加载，不一次全读）
-│   ├── scripts/ (3个)           检查器（与根目录 scripts/ 相同）
-│   └── templates/ (2个)         spec 骨架 + 决策点摘要
-├── claude-code/                 （规划中）
-└── opencode/                    （规划中）
-```
+| Component | Platform-Dependent | Description |
+|-----------|-------------------|-------------|
+| `references/` methodology guides | ❌ No | Pure Markdown, readable by any agent |
+| `scripts/` checkers | ❌ No | Pure Python CLI, runs in any environment |
+| `templates/` templates | ❌ No | Pure YAML/Markdown |
+| `integrations/hermes/` | ✅ Hermes | Leverages Hermes' skill/slash-command/clarify mechanisms |
+| `integrations/claude-code/` | ✅ Claude Code | Planned (CLAUDE.md + slash commands) |
+| `integrations/opencode/` | ✅ OpenCode | Planned (AGENTS.md) |
 
-**为什么是 skill 而非普通工具**：SDDL 的 8 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
+**Integration principle**: write the methodology core + checkers once; each platform only needs a thin "shell" (mapping the 8 commands to that platform's interaction mechanisms). If your agent isn't listed yet, copy the workflow from `integrations/hermes/SKILL.md` into your agent's rules file (e.g., `CLAUDE.md` / `AGENTS.md`) — the checker scripts are directly reusable.
 
-## 多平台支持
-
-SDDL 的**方法论核心是平台无关的**——`references/`（方法论手册）、`scripts/`（检查器）、`templates/`（模板）不依赖任何具体 agent：
-
-| 组件 | 平台依赖 | 说明 |
-|------|---------|------|
-| `references/` 方法论手册 | ❌ 无 | 纯 Markdown，任何 agent 都能读 |
-| `scripts/` 检查器 | ❌ 无 | 纯 Python CLI，任何环境都能跑 |
-| `templates/` 模板 | ❌ 无 | 纯 YAML/Markdown |
-| `integrations/hermes/` | ✅ Hermes | 利用 Hermes 的 skill/斜杠命令/clarify 机制 |
-| `integrations/claude-code/` | ✅ Claude Code | 规划中（利用 CLAUDE.md + slash command） |
-| `integrations/opencode/` | ✅ OpenCode | 规划中（利用 AGENTS.md） |
-
-**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 8 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `integrations/hermes/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
-
----
-
-## 项目结构
+## Project Structure
 
 ```
 sddl/
-├── scripts/                     检查器脚本（可直接运行）
-│   ├── check_sqc.py             SQC 检查（形成 Loop 门禁）
-│   ├── check_c1_c4.py           C1-C4 一致性检查（派生 Loop 门禁）
-│   └── sddl_status.py           状态恢复（目录即状态）
-├── references/                  方法论手册（渐进披露）
-│   ├── formation-loop.md        形成 Loop 详细流程
-│   ├── derivation-loop.md       派生 Loop 详细流程
-│   ├── spec-schema.md           Spec 五层结构
-│   ├── sqc-checklist.md         SQC 检查清单
-│   └── checker-matrix.md        C1-C4 检查矩阵
-├── templates/                   spec 骨架 + 决策点摘要模板
-├── examples/                    完整示例项目
-│   └── accounting/              记账/对账服务（从零到收敛）
-├── integrations/                各平台 Agent 适配器（Hermes 已完成，Claude Code/OpenCode 规划中）
-├── docs/                        最终方案（v1.1）
+├── scripts/                     Checker scripts (directly runnable)
+│   ├── check_sqc.py             SQC check (Formation Loop gate)
+│   ├── check_c1_c4.py           C1-C4 consistency check (Derivation Loop gate)
+│   └── sddl_status.py           State recovery (directory-as-state)
+├── references/                  Methodology guides (progressive disclosure)
+│   ├── formation-loop.md        Formation Loop detailed workflow
+│   ├── derivation-loop.md       Derivation Loop detailed workflow
+│   ├── spec-schema.md           Spec 5-layer structure
+│   ├── sqc-checklist.md         SQC check checklist
+│   └── checker-matrix.md        C1-C4 check matrix
+├── templates/                   Spec skeleton + decision summary templates
+├── examples/                    Complete example projects
+│   └── accounting/              Bookkeeping/reconciliation service (zero to converged)
+├── integrations/                Per-platform agent adapters (Hermes done; Claude Code/OpenCode planned)
+├── docs/                        Final methodology (v1.1)
 └── LICENSE
 ```
 
-## 方法论核心（简述）
+## Methodology Core
 
-### Spec 五层结构
+### Spec 5-Layer Structure
 
-| 层 | 内容 | 机器可消费性 |
-|----|------|------------|
-| L1 接口契约 | 函数签名、参数、返回、错误类型 | 完全（类型检查/AST） |
-| L2 数据模型 | JSON Schema | 完全（schema 验证） |
-| L3 行为描述 | GWT 场景 + 优先级 | 半（结构可解析） |
-| L4 边界条件 | 极端情况 + 优先级 | 半 |
-| L5 质量约束 | 性能/安全/可观测 | 弱（性能类标 env） |
+| Layer | Content | Machine-Consumable |
+|-------|---------|-------------------|
+| L1 Interface Contract | Function signatures, params, returns, error types | Fully (type checking / AST) |
+| L2 Data Models | JSON Schema | Fully (schema validation) |
+| L3 Behavior Description | GWT scenarios + priority | Partially (structure parseable) |
+| L4 Boundary Conditions | Explicit edge cases + priority | Partially |
+| L5 Quality Constraints | Performance/security/observability | Weakly (perf marked as env) |
 
-### 收敛判定
+### Convergence Verdict
 
 ```
-硬门禁：C1-def ∧ C2-def ∧ C3 ∧ C4b-def 全过（确定性）
-软共识：c1_sem≥0.95 ∧ c2_sem≥0.95 ∧ c4a≥0.90 ∧ c4b_sem≥0.90（Checklist 计票）
-且 must 覆盖 = 100% 且无 blocker violation → 收敛
+Hard gate: C1-def ∧ C2-def ∧ C3 ∧ C4b-def all pass (deterministic)
+Soft consensus: c1_sem≥0.95 ∧ c2_sem≥0.95 ∧ c4a≥0.90 ∧ c4b_sem≥0.90 (checklist voting)
+And must coverage = 100%, no blocker violations → converged
 ```
 
-### 检查矩阵
+### Check Matrix
 
 ```
           Tests        Code        Docs
@@ -234,35 +220,35 @@ sddl/
          └──────┘    └──────┘    └──────┘
 ```
 
-## 证据基础
+## Evidence Base
 
-SDDL 的设计经过文献验证（arXiv 论文）与三轮评审循环打磨：
+SDDL's design is validated by literature (arXiv papers) and three rounds of review loops:
 
-- **Self-Refine** (arXiv 2303.17651) — self-refine loop 范式源头
-- **Pride and Prejudice** (arXiv 2402.11436) — LLM 自反馈放大自偏置 → 异模型检查
-- **TICKing All the Boxes** (arXiv 2410.07061) — checklist 生成改善 LLM 评估
-- **Calibration Collapse Under Sycophancy** (arXiv 2026-04) — 绝对分数不可信 → 客观计票
-- **LLMorpheus** (arXiv 2404.09954) — LLM 变异测试 → 验收反推验证
-- **OpenSpec** (Fission-AI) — specs/+changes/+archive 变更管理实践
+- **Self-Refine** (arXiv 2303.17651) — origin of the self-refine loop paradigm
+- **Pride and Prejudice** (arXiv 2402.11436) — LLM self-feedback amplifies self-bias → cross-model checking
+- **TICKing All the Boxes** (arXiv 2410.07061) — checklist generation improves LLM evaluation
+- **Calibration Collapse Under Sycophancy** (arXiv 2026-04) — absolute scores unreliable → objective vote counting
+- **LLMorpheus** (arXiv 2404.09954) — LLM mutation testing → acceptance reverse verification
+- **OpenSpec** (Fission-AI) — specs/+changes/+archive change management practice
 
-完整证据链见 [`docs/SDDL-方案-v1.1.md`](docs/SDDL-方案-v1.1.md) 附录 A。
+Full evidence chain in [`docs/SDDL-方案-v1.1.md`](docs/SDDL-方案-v1.1.md) Appendix A (Chinese).
 
-## 适用门槛
+## When to Use
 
-| 模式 | 适用 | 成本 |
-|------|------|------|
-| 完整 SDDL | 接口≥8 且 must 验收≥10 且多 artifact 同步 | 高 |
-| 标准 SDDL | 接口 5-8 | 中 |
-| 轻量 SDD | 接口<5 但多 artifact | 低 |
-| 纯 TDD | 其余 | 最低 |
+| Mode | Applicability | Cost |
+|------|---------------|------|
+| Full SDDL | ≥8 interfaces and ≥10 must-level acceptances, multi-artifact sync | High |
+| Standard SDDL | 5-8 interfaces | Medium |
+| Light SDD | <5 interfaces but multi-artifact | Low |
+| Pure TDD | everything else | Lowest |
 
-**不适用**：一次性脚本、原型/POC、探索性研究代码。
+**Not for**: one-off scripts, prototypes/POCs, exploratory research code.
 
 ## License
 
-MIT License — 见 [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
 
-## 致谢
+## Acknowledgements
 
-- 方法论经过 3 轮评审循环（35 个问题关闭）+ 2 轮文献验证（arXiv 17 篇 + OpenSpec 实践）
-- Hermes Agent Skill 化版本经过 8 个分阶段命令 + 7 个测试场景验证
+- Methodology refined through 3 review loops (35 issues closed) + 2 rounds of literature validation (17 arXiv papers + OpenSpec practice)
+- The Hermes Agent Skill version validated through 8 staged commands + 7 test scenarios
