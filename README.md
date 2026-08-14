@@ -76,8 +76,8 @@ The problem with conversational programming: **context windows are finite, and t
 | Feature | Description |
 |---------|-------------|
 | **Decision Points** | Where requirements are ambiguous, the AI doesn't silently decide — it marks a decision point and the user confirms it via interactive prompts (with custom input support) |
-| **SQC Quality Check** | Quality gate for the spec itself: schema validity / reference integrity / assertability / behavior coverage / contradiction detection |
-| **C1-C4 Layered Checks** | Consistency between artifacts and spec: acceptance coverage (incl. mutation-testing reverse verification) / interface comparison / test execution / doc symbol table |
+| **SQC Quality Check** | Quality gate for the spec itself — **deterministic checks by scripts** (schema validity / reference integrity / assertability) **+ semantic review by agent LLM** (behavior coverage / contradictions / completeness) |
+| **C1-C4 Layered Checks** | Consistency between artifacts and spec — **deterministic evidence by scripts** (interface comparison / test execution / doc symbol table) **+ semantic review by agent LLM** (does the test really cover the behavior? does the code really match the spec?) |
 | **Directory-as-State** | Progress is encoded in directory structure — interruption recovery is free (with git commits as checkpoints) |
 | **Budget Control** | Three budgets (formation/implementation/revision), quantified degradation paths, revision incentives that don't punish honesty |
 | **Auditable** | Every decision-point confirmation record, every revision CHANGELOG, every check report JSON — fully traceable |

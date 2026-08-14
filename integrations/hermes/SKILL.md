@@ -129,15 +129,15 @@ last_check: { type: sqc, spec: auth-v0.1.0, result: pass, at: 2026-08-06T16:00 }
 | verify | C1-C4 分层检查 + 收敛判定 | 硬门禁 + 软共识 + must 覆盖 |
 | archive | 变更归档、spec 合并 | CHANGELOG + spec 更新 |
 
-## 检查器脚本（scripts/）
+## 检查器脚本（scripts/）——确定性证据，不是语义判断
 
-**直接跑脚本，不手写检查代码**（T1 验证过的逻辑已固化）：
+**脚本只负责确定性证据**（类型检查/测试执行/符号表/YAML），**语义审核由 agent 的 LLM 能力执行**：
 
 ```bash
-# SQC 检查（形成 Loop 门禁）—— spec 冻结前跑
+# SQC 确定性检查（形成 Loop 门禁）—— 脚本给出事实
 python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
-# C1-C4 一致性检查（派生 Loop 门禁）—— verify 时跑
+# C1-C4 确定性检查（派生 Loop 门禁）—— 脚本给出事实
 python3 scripts/check_c1_c4.py . --verbose
 
 # 状态恢复（中断后）—— 扫目录输出当前进度 + 下一步命令
@@ -145,8 +145,16 @@ python3 scripts/sddl_status.py .
 ```
 
 - 退出码：0 = pass/converged，1 = fail（可挂 CI）
-- `--json` 输出机器可读（violation 格式）
-- **注意**：语义检查（SQC-sem / C1-sem 等）用启发式 fallback，假阴性风险高（陷阱 #8）——首轮结果需人工复核，失败项逐个判断"真问题 vs 匹配问题"
+- `--json` 输出机器可读证据（供 LLM 审核引用）
+
+**分工原则（重要）**：
+
+| 层 | 谁负责 |
+|----|--------|
+| 确定性证据（硬条件）：schema 合法/接口存在/测试通过/符号表 | **脚本** |
+| 语义审核（软条件）：行为覆盖/THEN 可断言/测试真覆盖/文档真实性 | **agent 的 LLM**（见 `references/llm-review.md`） |
+
+**不要用脚本启发式做语义判断**——字符串匹配会假阴性爆炸（T1 实测 C1-sem 0.48）。脚本是证据收集器，agent 是裁判。
 
 ## 何时读哪个 Reference
 
@@ -156,10 +164,11 @@ python3 scripts/sddl_status.py .
 |------|-----|
 | 执行 interview | `references/formation-loop.md`（阶段 1） |
 | 生成 spec | `references/spec-schema.md` + `templates/spec-template.yaml` |
-| SQC 检查 | `references/sqc-checklist.md` |
+| SQC 检查 | `references/sqc-checklist.md`（def 用脚本，sem 用 LLM） |
 | 决策点确认 | `templates/decision-summary.md` |
 | 派生 artifacts | `references/derivation-loop.md`（阶段 1-2） |
-| C1-C4 检查 | `references/checker-matrix.md` |
+| C1-C4 检查 | `references/checker-matrix.md`（def 用脚本，sem 用 LLM） |
+| **语义审核操作** | **`references/llm-review.md`（核心：LLM 如何做审核）** |
 | 路由/回写/预算 | `references/derivation-loop.md`（阶段 3-5） |
 | 变更提案 | `references/formation-loop.md`（变更管理） |
 

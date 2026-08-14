@@ -49,44 +49,48 @@ GIVEN 不可构造检查（语义，配合 SQC-sem-4）：
 - [ ] 每个 DP 有 id / topic / default / category / requires_confirmation / status
 - [ ] DP 数量 ≤ 15（超限 → 建议拆分 spec）
 
-## SQC-sem（语义检查，Checklist 判定）
+## SQC-sem（语义检查，LLM 审核）
 
-复用派生 Loop 的 Checklist 投票机制（见 checker-matrix.md §2）：
-- 生成判定项（每个检查项一个二分问题）
-- 分层投票（快筛 1 模型 → 投票 3 模型 → 复核）
-- 共识率 = 采纳项 / 总项
+> **SQC-sem 由 agent 的 LLM 能力审核**，不是脚本启发式。脚本只做 SQC-def（确定性）。
+> agent 基于 spec 全文 + 需求陈述，逐项语义判断。完整操作见 `llm-review.md`。
+
+### 审核项（agent 逐项判断，附证据）
 
 ### SQC-sem-1 行为覆盖
-判定项示例：
+审核 prompt：
 ```
 [COV-1] spec 是否包含 happy path 行为？          （至少 1 个 must）
 [COV-2] spec 是否包含主要错误路径行为？          （至少 1 个 must）
 [COV-3] spec 是否包含至少 1 个边界行为？         （boundaries 非空）
 [COV-4] must 级行为是否覆盖了核心用户价值？      （must 不全在边角）
+[COV-5] 需求陈述的场景清单是否都有对应行为？      （逐条对比）
 ```
+判定：每项 covered / not_covered + 证据（引用 spec 行号 / 需求陈述）。
 
 ### SQC-sem-2 行为矛盾
-判定项示例：
+审核 prompt：
 ```
 [CON-1] 是否存在两个 behavior 的 GIVEN 重叠但 THEN 冲突？（如同条件一个说 200 一个说 400）
 [CON-2] 是否存在 behavior 与 non_goals 冲突？
 [CON-3] 是否存在 behavior 与 boundaries 冲突？
 ```
+判定：逐项找矛盾证据；找不到报 "no evidence found"（对抗式立场）。
 
 ### SQC-sem-3 完整性缺口
-判定项示例：
+审核 prompt：
 ```
-[GAP-1] 需求陈述的场景清单是否都有对应 behavior？
+[GAP-1] 需求陈述的场景清单是否都有对应 behavior？（逐条对比）
 [GAP-2] 需求陈述的约束清单是否都有对应 quality_constraint？
 [GAP-3] deferred 细节是否都有决策点或已写入 spec？
 ```
 
 ### SQC-sem-4 可测性判定
-判定项示例：
+审核 prompt：
 ```
 [TEST-1] 每个 THEN 是否可转化为具体断言（无模糊词、有具体值/类型）？
 [TEST-2] 每个 GIVEN 是否可构造（有明确的 fixture/mock 路径）？
 ```
+注意：SQC-def-3 的模糊词正则（确定性）只抓"看起来模糊"，这里抓"语义上不可测"（如"系统应响应快速"无量化标准）。
 
 ## 输出
 
@@ -102,11 +106,16 @@ GIVEN 不可构造检查（语义，配合 SQC-sem-4）：
     "dp_ok": true
   },
   "sem": {
-    "consensus_rates": {"coverage": 1.0, "contradiction": 1.0, "gap": 0.8, "testability": 1.0},
+    "items": [
+      {"id": "COV-1", "verdict": "covered", "evidence": "B001 是 happy path must 行为（spec.yaml:120）"},
+      {"id": "CON-1", "verdict": "no_evidence", "evidence": "逐条比对未发现同 GIVEN 异 THEN"}
+    ],
     "blockers": []
   },
   "verdict": "pass | fail",
-  "blockers": []
+  "blockers": [],
+  "deterministic_evidence": "（脚本事实，可重跑）",
+  "semantic_evidence": "（LLM 判定，记录模型/审核 prompt 版本，可审计）"
 }
 ```
 
