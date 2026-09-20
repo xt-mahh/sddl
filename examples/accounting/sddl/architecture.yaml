@@ -1,0 +1,36 @@
+# SDDL v2.0 迁移补 Architecture（示例：accounting）
+# 迁移方式：单模块项目 → single_module 豁免（豁免划分，不豁免门禁）
+# 详见 docs/migration-v1-to-v2.md 方案 B
+
+meta:
+  id: "accounting-system"
+  version: "1.0.0"
+  status: "frozen"
+  input_specs: ["accounting@0.1.1"]
+
+# 单模块豁免声明：本服务预期单模块演进，不拆分
+single_module: true
+modules: []
+
+tech_stack:
+  language: "python3"
+  storage: "内存 store（dict，测试隔离由 fixture 保证）"
+  notes: "v1.x 已冻结的 spec 决策沿用，不重复登记"
+
+directory_layout: |
+  src/accounting_service/   # 单模块：全部代码
+  tests/                    # 测试（含隔离 fixture）
+
+data_flows: []
+
+decision_points:
+  - id: "DP-901"
+    topic: "单模块豁免确认（v2.0 迁移）"
+    default: "single_module: true"
+    alternatives: ["single_module: true", "拆分 accounts/transactions 模块"]
+    rationale: "接口数与 must 验收规模未达拆分阈值；拆分收益不抵架构维护成本"
+    category: "contract"
+    requires_confirmation: true
+    status: "confirmed"
+
+boundaries: []

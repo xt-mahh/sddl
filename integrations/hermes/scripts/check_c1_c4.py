@@ -38,11 +38,15 @@ def load_spec(spec_path: Path) -> dict:
 
 
 def extract_code_symbols(code_src: str) -> dict:
-    """提取代码公开符号：函数、类、异常类"""
+    """提取代码公开符号：函数、类、异常类
+
+    只遍历模块顶层（top-level）定义——类方法/嵌套函数是实现细节，
+    不属于模块公开 API 面（C2-def 的"无越界 API"只审公开面）。
+    """
     tree = ast.parse(code_src)
     funcs, classes = {}, set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.FunctionDef) and not node.name.startswith("_"):
+    for node in tree.body:          # top-level only (no ast.walk)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
             funcs[node.name] = [a.arg for a in node.args.args]
         elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
             classes.add(node.name)
@@ -110,7 +114,7 @@ def run_c2_def(spec, code_src: str) -> dict:
     spec_errors = set()
     for i in spec["interfaces"]:
         spec_errors.update(i.get("errors", []))
-    code_errors = set(re.findall(r"^class (\w+Error)\(DomainError\)", code_src, re.M))
+    code_errors = set(re.findall(r"^class (\w+Error)\(DomainError[),]", code_src, re.M))
     missing_errors = sorted(spec_errors - code_errors)
 
     return {

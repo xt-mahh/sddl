@@ -1,0 +1,68 @@
+# SDDL v2.0 架构 Spec 模板（architecture.yaml）
+#
+# 位置：sddl/architecture.yaml（单文件，与 spec.yaml 同构）
+# 生成：/sddl:arch 命令（读取已冻结的 specs/<domain>/spec.yaml 划分模块）
+# 门禁：check_arch.py 静态检查（C-arch-def1/2/3）+ LLM 内聚复审（C-arch-sem）
+# 冻结：spec_status: frozen 后才可进入派生 Loop（双冻结门禁的第二个）
+
+meta:
+  id: "sample-system"            # 必填：系统唯一标识
+  version: "1.0.0"               # 必填：语义化版本
+  status: "drafting"             # drafting | reviewing | frozen | evolved
+  input_specs:                   # 必填：本架构的输入（必须全部 frozen 才可生成本文件）
+    - "auth@0.1.0"
+    - "payment@0.1.0"
+
+# 单模块豁免：小项目可跳过模块划分，但必须显式声明（不允许缺省）
+single_module: false
+
+modules:                         # 必填（single_module: true 时可为空数组）
+  - name: "auth-gateway"         # 必填：模块名（kebab-case，= 派生代码目录名）
+    responsibilities:            # 必填：职责清单（≥1 条，供 C-arch-sem 内聚复审）
+      - "身份认证与凭证校验"
+      - "token 签发与刷新"
+    owns:                        # 必填：拥有的 domain specs（C-arch-def1 双向覆盖检查对象）
+      - "auth"                   # 每个 domain 有且仅有一个 owner 模块
+    depends_on: []               # 必填：依赖的模块名（C-arch-def2 import 图比对对象；禁止环）
+    path: "src/auth_gateway"     # 必填：模块代码目录（C-arch-def3 检查对象）
+
+  - name: "payment-core"
+    responsibilities:
+      - "支付下单与状态机流转"
+    owns: ["payment"]
+    depends_on: ["auth-gateway"] # 依赖 auth 的公开接口，不 import 其内部
+    path: "src/payment_core"
+
+# 技术栈与结构决策——全部走决策点（DP-001 起编号，与 spec 决策点共用编号池）
+tech_stack:
+  language: "python3.13"
+  framework: "fastapi"
+  storage: "sqlite"
+  notes: "选型理由写入对应决策点的 rationale"
+
+directory_layout: |              # 必填：项目目录约定（供 /sddl:derive 落盘与人读）
+  src/<module>/        # 模块代码（path 字段声明的目录）
+  tests/<module>/      # 模块测试（与模块目录一一对应）
+  docs/current/        # 已实现能力文档
+  docs/planned/        # 路线图文档
+
+data_flows:                      # 建议：跨模块数据流（供 C-arch-sem 内聚复审佐证）
+  - from: "payment-core"
+    to: "auth-gateway"
+    payload: "AuthResult"
+    note: "支付前校验 token"
+
+decision_points:                 # 必填：架构决策点（模板/框架/存储选型等均须登记）
+  - id: "DP-001"
+    topic: "web 框架选型"
+    default: "fastapi"
+    alternatives: ["flask", "fastapi", "django"]
+    rationale: "异步支持 + 自动 OpenAPI 文档"
+    category: "contract"         # contract | behavior | constraint | implementation
+    requires_confirmation: true
+    status: "pending"            # pending | confirmed | modified | delegated
+
+boundaries:                      # 必填（可为空数组）：架构级边界条件
+  - condition: "auth-gateway 不可用"
+    expectation: "payment-core 支付请求抛出 ServiceUnavailableError，不产生部分写入"
+    priority: "must"

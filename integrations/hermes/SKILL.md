@@ -1,32 +1,32 @@
 ---
 name: sddl
-description: "Spec-Driven Development Loop：以结构化 Spec 为单一事实来源，双 Loop（形成 Loop 需求→冻结 Spec，派生 Loop Spec→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要"先定义清楚再动手"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:derive /sddl:verify /sddl:archive。"
-version: 1.0.0
+description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:archive。"
+version: 2.0.0
 author: 小智
 license: MIT
 metadata:
   hermes:
-    tags: [sdd, spec-driven, development-workflow, ai-coding, quality, formation-loop]
+    tags: [sdd, spec-driven, development-workflow, ai-coding, quality, formation-loop, architecture-loop]
     related_skills: [writing-plans, test-driven-development, hermes-agent-skill-authoring]
 ---
 
 # Spec-Driven Development Loop (SDDL)
 
 > **已开源**：https://github.com/xt-mahh/sddl (2026-08-06, MIT License)
-> 完整方法论 + 检查器脚本 + 示例项目见 GitHub 仓库。
+> v2.0 重构：双 Loop → 三 Loop（新增架构 Loop），见 docs/migration-v1-to-v2.md。
 
 ## Overview
 
-SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**先定义清楚做什么，再动手写代码**——以结构化 Spec 为单一事实来源，双 Loop 闭环保证质量和可审计性。
+SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**先定义清楚做什么、怎么分层，再动手写代码**——以结构化 Spec + 架构为单一事实来源，三 Loop 闭环保证质量和可审计性。
 
 ```
-形成 Loop（回答"做什么"）       派生 Loop（回答"怎么做对"）
-需求 ──▶ 访谈 ──▶ Spec草稿 ──▶ 冻结 Spec ──▶ tests/code/docs ──▶ 收敛
-              └─▶ SQC质量检查 ──┘                  └─▶ C1-C4一致性检查 ─┘
-              └─▶ 决策点确认 ──┘
+形成 Loop（做什么）           架构 Loop（怎么分层）          派生 Loop（怎么做对）
+需求 ──▶ 访谈 ──▶ Spec ──▶ 冻结 ──▶ architecture ──▶ 冻结 ──▶ tests/code/docs ──▶ 收敛
+              └─▶ SQC质量检查 ──┘         └─▶ C-arch检查 ──┘      └─▶ C1-C4 + C-arch ─┘
+              └─▶ 决策点确认 ──┘           └─▶ 决策点确认 ──┘
 ```
 
-**为什么用 SDDL**：对话式编程的痛点——上下文漂移（聊 50 轮忘了第 3 轮的约定）、多 artifact 不同步（代码改了测试/文档没跟上）、验收主观化（"感觉对了"代替"符合规格"）。SDDL 用**稳定可全文加载的 Spec** + **分层一致性检查**解决三者。
+**为什么用 SDDL**：对话式编程的痛点——上下文漂移（聊 50 轮忘了第 3 轮的约定）、多 artifact 不同步（代码改了测试/文档没跟上）、**架构漂移（AI 写代码时临场发明模块边界）**、验收主观化（"感觉对了"代替"符合规格"）。SDDL 用**稳定可全文加载的 Spec** + **架构层** + **分层一致性检查**解决四者。
 
 ## When to Use
 
@@ -48,10 +48,12 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 | `/sddl:init` | 初始化 | 建目录结构、读已有代码/需求 | `sddl/` 骨架 + `state.yaml` |
 | `/sddl:interview` | 形成 | 分层需求访谈（L0-L2 必答） | 需求陈述 |
 | `/sddl:spec` | 形成 | 生成 L1-L5 spec 草稿 + 决策点标记 | `specs/<domain>/spec.yaml` |
-| `/sddl:confirm` | 形成 | 决策点摘要 clarify 确认 | `decisions/<domain>-confirmation.yaml` |
-| `/sddl:freeze` | 形成 | SQC 检查 + 冻结 | `spec_status: frozen` |
-| `/sddl:derive` | 派生 | 从 spec 派生 tests/code/docs | `src/ tests/ docs/` |
-| `/sddl:verify` | 派生 | C1-C4 一致性检查 + 收敛判定 | `checks/*.json` + 收敛/路由 |
+| `/sddl:confirm` | 形成/架构 | 决策点摘要 clarify 确认 | `decisions/<domain>-confirmation.yaml` |
+| `/sddl:freeze` | 形成/架构 | SQC / C-arch 检查 + 冻结（phase 感知） | `spec_status: frozen` / `arch_status: frozen` |
+| `/sddl:arch` | 架构 | 读冻结 specs 划分模块，生成架构 spec（contract 级 DP ≥3 候选附 research 笔记） | `sddl/architecture.yaml` + `sddl/research/*.md` |
+| `/sddl:derive` | 派生 | 从 spec+架构派生 tests/code/docs（按 parallel_groups 分组并行） | `src/ tests/ docs/` |
+| `/sddl:verify` | 派生 | C1-C4 + C-arch 检查 + 收敛判定 | `checks/*.json` + 收敛/路由 |
+| `/sddl:bugfix` | 修复 | 轻量缺陷通道：diagnose→fix→verify，三态结论 | `sddl/bugs/<slug>/report.md` |
 | `/sddl:archive` | 归档 | 变更归档、spec 合并 | `specs/` 更新 + CHANGELOG |
 
 ## 核心原则
@@ -62,6 +64,21 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 4. **决策点不静默**：模糊处 AI 给默认值 + 标记决策点，用户确认后才冻结
 5. **进度即目录**：阶段完成 = 文件存在（Convention over Config），中断恢复免费
 
+## 双冻结门禁（v2.0 核心）
+
+**功能 spec 与架构都冻结才可派生**：
+
+```yaml
+# state.yaml
+spec_status: frozen          # 形成 Loop 完成
+arch_status: frozen          # 架构 Loop 完成（新增）
+current_phase: derivation    # 双冻结齐备后推进
+```
+
+- 功能 spec 先冻结（DP-001 确认：架构基于冻结的功能边界划分，不反向切分需求）
+- 小项目豁免：`single_module: true` 的空 modules 架构也必须生成并冻结——豁免的是划分，不是门禁
+- 架构修订走独立回路（arch_error → 解冻 architecture.yaml → 修订 → 重冻），**不解冻功能 spec**（层次隔离）
+
 ## 目录即状态（Convention over Config）
 
 **不看状态文件，看目录就知道进度**。这是本 skill 的进度可见性机制（配合 git commit 作为 checkpoint）。
@@ -69,17 +86,22 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 ```
 <project>/
 ├── sddl/
+│   ├── constitution.md           # v2.0（可选）：项目宪法——不可变原则，高于 spec/架构
 │   ├── specs/                    # 存在 = 访谈完成，spec 已生成
 │   │   └── <domain>/spec.yaml    # status: frozen = 冻结完成
+│   ├── architecture.yaml         # v2.0：存在 = 架构 Loop 已开始；frozen = 完成
+│   ├── research/                 # v2.0（按需）：架构选型调研笔记（contract 级 DP ≥3 候选触发）
+│   ├── bugs/                     # v2.0（按需）：轻量缺陷修复通道产物 <slug>/
 │   ├── changes/                  # 变更提案（增量开发，可并行）
-│   ├── decisions/                # 决策点确认记录
+│   ├── decisions/                # 决策点确认记录（spec 与 architecture 共用编号池）
 │   │   └── <domain>-confirmation.yaml
 │   ├── checks/                   # 检查报告存档（机器可读 JSON）
 │   │   ├── sqc-<domain>-v1.json
+│   │   ├── arch-<id>-v1.json     # v2.0：架构检查报告
 │   │   └── c1-c4-<domain>-v1.json
 │   └── state.yaml                # 唯一元数据：阶段指针 + 预算 + 最近检查
-├── src/                          # 派生 Loop 后出现
-├── tests/                        # 派生 Loop 后出现
+├── src/                          # 派生 Loop 后出现（按模块 path 落位）
+├── tests/                        # 派生 Loop 后出现（tests/<module>/）
 ├── docs/                         # 派生 Loop 后出现（含 current/planned 分区）
 └── (git commit 在每个阶段完成时)
 ```
@@ -87,18 +109,19 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 **state.yaml 最小化**（只存指针，不存进度详情）：
 ```yaml
 spec_status: frozen          # interviewing | drafting | reviewing | frozen | evolved
-current_phase: derivation    # formation | derivation | complete
+arch_status: frozen          # v2.0：drafting | reviewing | frozen | evolved（单模块豁免项目也 frozen）
+current_phase: derivation    # formation | architecture | derivation | complete
 budget: { formation: 40%, implementation: 12%, revision: 100% }
-last_check: { type: sqc, spec: auth-v0.1.0, result: pass, at: 2026-08-06T16:00 }
+last_check: { type: arch, id: sys-v1.0.0, result: pass, at: 2026-09-20T10:00 }
 ```
 
-**恢复规则**：skill 重新加载时扫目录——`specs/` 无 = 从 interview 开始；`specs/` 有但无 decisions/ = 从 confirm 开始；`decisions/` 有但 spec 未 frozen = 从 freeze 开始；`src/` 有但无 checks/ = 从 derive 开始；`checks/` 有 = 从 verify 开始。
+**恢复规则**：skill 重新加载时扫目录——`specs/` 无 = 从 interview 开始；`specs/` 有但无 decisions/ = 从 confirm 开始；`decisions/` 有但 spec 未 frozen = 从 freeze 开始；**specs 全 frozen 但无 architecture.yaml = 从 /sddl:arch 开始（v2.0）**；architecture.yaml 有但未 frozen = 从架构 freeze 开始；双 frozen 但无 `src/` = 从 derive 开始；`src/` 有但无 checks/ = 从 verify 开始；`checks/` 有 = verify 后（archive 或新变更）。
 
 **阶段完成 = git commit**（E 辅助）：每个命令成功结束后 commit（`feat(sddl): interview complete`），保证可回溯。
 
-## 双 Loop 流程编排
+## 三 Loop 流程编排
 
-### 形成 Loop（做对的事）——5 个命令
+### 形成 Loop（做对的事）——4 个命令
 
 ```
 /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze
@@ -114,19 +137,34 @@ last_check: { type: sqc, spec: auth-v0.1.0, result: pass, at: 2026-08-06T16:00 }
 | confirm | 决策点摘要 → clarify 逐项确认（含自定义输入） | 决策点无 pending |
 | freeze | SQC 全检 + 确认记录签署 | SQC 无 blocker + frozen |
 
-### 派生 Loop（把事做对）——3 个命令
+### 架构 Loop（怎么分层）——3 个命令（v2.0 新增）
 
 ```
-/sddl:derive → /sddl:verify → (收敛) → 完成
-     │              │
-     └─ 路由 ───────┘
-       （violation → 重派 code/tests/docs 或 解冻回形成 Loop）
+/sddl:arch → /sddl:confirm → /sddl:freeze
+     │            │              │
+     └─ 修订 ─────┴──────┘
+       （C-arch 不过 / 用户改划分 → 回 arch 修订）
 ```
 
 | 命令 | 关键动作 | 检查点 |
 |------|---------|--------|
-| derive | 从 spec 派生 tests/code/docs | artifacts 可运行 |
-| verify | C1-C4 分层检查 + 收敛判定 | 硬门禁 + 软共识 + must 覆盖 |
+| arch | 读冻结 specs 按职责内聚划分模块，选型登记决策点 | check_arch.py 通过 + DP 无遗漏 |
+| confirm | 架构决策点 clarify 确认（与 spec 共用编号池） | 决策点无 pending |
+| freeze | C-arch 检查 + 冻结 architecture.yaml | C-arch-def 全过 + arch_status: frozen |
+
+### 派生 Loop（把事做对）——3 个命令
+
+```
+/sddl:derive → /sddl:verify → (收敛) → /sddl:archive
+     │              │
+     └─ 路由 ──────┘
+       （violation → 重派 code/tests/docs / arch_error 解冻架构 / 解冻回形成 Loop）
+```
+
+| 命令 | 关键动作 | 检查点 |
+|------|---------|--------|
+| derive | 从 spec+架构派生 tests/code/docs（双冻结硬前置） | artifacts 可运行 |
+| verify | C1-C4 + C-arch 分层检查 + 收敛判定 | 硬门禁 + 软共识 + must 覆盖 |
 | archive | 变更归档、spec 合并 | CHANGELOG + spec 更新 |
 
 ## 检查器脚本（scripts/）——确定性证据，不是语义判断
@@ -136,6 +174,10 @@ last_check: { type: sqc, spec: auth-v0.1.0, result: pass, at: 2026-08-06T16:00 }
 ```bash
 # SQC 确定性检查（形成 Loop 门禁）—— 脚本给出事实
 python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+
+# C-arch 确定性检查（架构 Loop 门禁 + 派生 C-arch 维度）—— v2.0
+python3 scripts/check_arch.py . --verbose                # 冻结前（struct + def1）
+python3 scripts/check_arch.py . --with-imports --verbose # 派生后（+ def2 import 图 / def3 目录）
 
 # C1-C4 确定性检查（派生 Loop 门禁）—— 脚本给出事实
 python3 scripts/check_c1_c4.py . --verbose
@@ -166,9 +208,14 @@ python3 scripts/sddl_status.py .
 | 生成 spec | `references/spec-schema.md` + `templates/spec-template.yaml` |
 | SQC 检查 | `references/sqc-checklist.md`（def 用脚本，sem 用 LLM） |
 | 决策点确认 | `templates/decision-summary.md` |
-| 派生 artifacts | `references/derivation-loop.md`（阶段 1-2） |
+| **生成架构（v2.0）** | **`references/architecture-loop.md` + `templates/architecture-template.yaml`** |
+| C-arch 检查 | `references/architecture-loop.md`（阶段 4）+ `references/checker-matrix.md` |
+| **架构选型调研（v2.0）** | **`references/research-notes.md`（contract 级 DP ≥3 候选触发）** |
+| **修 bug（v2.0）** | **`references/bugfix-lane.md`（轻量通道，先判 code-level / spec-level）** |
+| **项目宪法（v2.0）** | **`templates/constitution-template.md`（init 时建，条款号进 SQC/C-arch 引用）** |
+| 派生 artifacts | `references/derivation-loop.md`（阶段 1-2；并行组来自 check_arch.py facts.parallel_groups） |
 | C1-C4 检查 | `references/checker-matrix.md`（def 用脚本，sem 用 LLM） |
-| **语义审核操作** | **`references/llm-review.md`（核心：LLM 如何做审核）** |
+| **语义审核操作** | **`references/llm-review.md`（核心：LLM 如何做审核，含架构内聚复审）** |
 | 路由/回写/预算 | `references/derivation-loop.md`（阶段 3-5） |
 | 变更提案 | `references/formation-loop.md`（变更管理） |
 
@@ -198,18 +245,21 @@ python3 scripts/sddl_status.py .
 7. **预算无记录**——不更新 state.yaml 预算 = 成本失控。每命令结束更新。
 8. **语义检查用粗糙字符串匹配**——T1 实测：关键词匹配把 C1-sem 打到 0.48（假阴性爆炸）。优先用 Checklist LLM 投票；启发式仅作 fallback，且必须语义化（AST 提取断言 + 结构化关键词），首轮结果不可信，需人工复核。
 9. **测试间共享状态泄漏**——T1 实测：内存 store 跨测试共享导致断言失败。派生时必须加隔离 fixture（autouse 重置）；测试断言走公开接口，不直接访问内部 `_store`。
-10. **纯查询函数带副作用**——T1 实测：`detectDiscrepancy` 内部改 status 违反 spec B006（应保持 draft）。纯查询接口（返回报告/查询）不得修改状态，C2-sem 应检查。
+10. **纯查询函数带副作用**--T1 实测：`detectDiscrepancy` 内部改 status 违反 spec B006（应保持 draft）。纯查询接口（返回报告/查询）不得修改状态，C2-sem 应检查。
+11. **凭记忆写验证/演示代码**--h3-continuity 实测：给自研模块写 demo 时凭印象猜 API（参数个数/不存在的 kwarg/自造数据流），连错 3 次。规则：**动手前先 read_file 读真实源码签名 + 用生产数据流契约（如 results.json 读写合并），不用合成 dict**。且单元自测全过 ≠ 集成可用--正是走真实数据流的 demo 暴露了 stored_params 从未写入、级联分支在生产中永不触发的死路 bug。verify 要覆盖"存档->载入->检测"完整闭环，不只测函数。
 
 ## Verification Checklist
 
-- [ ] `sddl/` 目录结构正确（specs/changes/decisions/checks/state.yaml）
+- [ ] `sddl/` 目录结构正确（specs/architecture.yaml/changes/decisions/checks/state.yaml）
 - [ ] spec.yaml 通过 SQC-def（schema 合法/引用完整/可断言性/决策点覆盖）
-- [ ] 决策点全部 confirmed/modified/delegated（无 pending）
+- [ ] 决策点全部 confirmed/modified/delegated（无 pending，含架构决策点）
 - [ ] 确认记录签署（overall: approved）
-- [ ] spec_status: frozen 后才进入派生
+- [ ] spec_status: frozen 后才进入架构 Loop
+- [ ] architecture.yaml 通过 check_arch.py（struct + def1；派生后 def2/def3）
+- [ ] arch_status: frozen 后才进入派生（双冻结门禁）
 - [ ] C1-def 做了结构反推（非信任标签）
-- [ ] 硬条件（C1-def/C2-def/C3/C4b-def）全过
-- [ ] 软条件共识率达标（c1_sem≥0.95 c2_sem≥0.95 c4a≥0.90 c4b_sem≥0.90）
+- [ ] 硬条件（C1-def/C2-def/C3/C4b-def/C-arch-def）全过
+- [ ] 软条件共识率达标（c1_sem≥0.95 c2_sem≥0.95 c4a≥0.90 c4b_sem≥0.90 c_arch_sem≥0.90）
 - [ ] must 级验收覆盖 100%
 - [ ] state.yaml 预算已更新
 - [ ] 阶段完成 git commit 已打
@@ -219,6 +269,7 @@ python3 scripts/sddl_status.py .
 ### 从零开始新项目
 ```
 /sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze
+           → /sddl:arch → /sddl:confirm → /sddl:freeze（架构）
            → /sddl:derive → /sddl:verify → /sddl:archive
 ```
 

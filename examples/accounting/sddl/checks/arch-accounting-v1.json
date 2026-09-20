@@ -1,0 +1,30 @@
+{
+  "checker": "check_arch.py",
+  "version": "2.0.0",
+  "project": "accounting-system",
+  "at": "2026-09-20T12:00:00+08:00",
+  "mode": "pre-freeze (struct + def1; no --with-imports at migration)",
+  "pass": true,
+  "issues": [],
+  "warnings": [],
+  "deterministic_evidence": {
+    "command": "python3 scripts/check_arch.py examples/accounting --json",
+    "facts": {
+      "pending_dps": [],
+      "spec_domains": ["accounting"],
+      "ownership": {}
+    }
+  },
+  "semantic_evidence": {
+    "layer": "c_arch_sem",
+    "note": "single_module 豁免：无 modules 划分，内聚 Checklist 不适用；豁免确认走 DP-901",
+    "items": [],
+    "summary": "single_module exemption, n/a",
+    "blockers": []
+  },
+  "decision": {
+    "dp": "DP-901",
+    "verdict": "confirmed",
+    "action": "arch_status -> frozen"
+  }
+}

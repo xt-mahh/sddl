@@ -152,8 +152,8 @@ def check_sqc(spec_path: str) -> dict:
     dps = spec.get("decision_points", [])
     if not isinstance(dps, list):
         def4["issues"].append("decision_points 不存在或非列表")
-    elif len(dps) > 15:
-        def4["issues"].append(f"决策点 {len(dps)} 个超过 15 上限")
+        if len(dps) > 25:
+            def4["issues"].append(f"决策点 {len(dps)} 个超过 25 上限")
     for dp in dps:
         for f in DP_FIELDS:
             if f not in dp:

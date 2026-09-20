@@ -24,6 +24,7 @@ def determine_state(root: Path) -> dict:
     # 收集 spec 文件
     spec_files = list(specs.glob("*/spec.yaml")) if specs.exists() else []
 
+    arch_file = sddl_dir / "architecture.yaml"
     state = {
         "initialized": sddl_dir.exists() and (sddl_dir / "state.yaml").exists(),
         "spec_files": [str(p.relative_to(root)) for p in spec_files],
@@ -31,6 +32,8 @@ def determine_state(root: Path) -> dict:
         "has_decisions": any(decisions.glob("*confirmation*.yaml")) if decisions.exists() else False,
         "has_sqc_check": any(checks.glob("sqc-*.json")) if checks.exists() else False,
         "has_c1c4_check": any(checks.glob("c1-c4-*.json")) if checks.exists() else False,
+        "has_arch": arch_file.exists(),
+        "has_arch_check": any(checks.glob("arch-*.json")) if checks.exists() else False,
         "has_src": (root / "src").exists(),
         "has_tests": (root / "tests").exists(),
         "has_docs": (root / "docs").exists(),
@@ -43,10 +46,12 @@ def determine_state(root: Path) -> dict:
         for line in state_file.read_text().splitlines():
             if line.startswith("spec_status:"):
                 state["spec_status"] = line.split(":", 1)[1].strip()
+            elif line.startswith("arch_status:"):
+                state["arch_status"] = line.split(":", 1)[1].strip()
             elif line.startswith("current_phase:"):
                 state["current_phase"] = line.split(":", 1)[1].strip()
 
-    # 判定当前阶段 + 下一步命令
+    # 判定当前阶段 + 下一步命令（v2.0：双冻结门禁）
     if not state["initialized"]:
         state["stage"] = "not_initialized"
         state["next_command"] = "/sddl:init"
@@ -59,7 +64,14 @@ def determine_state(root: Path) -> dict:
     elif state["has_decisions"] and not state["has_sqc_check"]:
         state["stage"] = "freeze"
         state["next_command"] = "/sddl:freeze"
-    elif state["has_sqc_check"] and state.get("spec_status") == "frozen" and not state["has_src"]:
+    elif state.get("spec_status") == "frozen" and not state["has_arch"]:
+        # v2.0：功能 spec 冻结后先走架构 Loop，再派生
+        state["stage"] = "arch"
+        state["next_command"] = "/sddl:arch"
+    elif state["has_arch"] and not state["has_arch_check"]:
+        state["stage"] = "arch_freeze"
+        state["next_command"] = "/sddl:freeze（架构）"
+    elif state["has_arch"] and state.get("arch_status") == "frozen" and not state["has_src"]:
         state["stage"] = "derive"
         state["next_command"] = "/sddl:derive"
     elif state["has_src"] and state["has_tests"] and not state["has_c1c4_check"]:

@@ -25,6 +25,10 @@
 | C4a | 软 | spec ↔ docs（Checklist） |
 | C4b-def | 硬 | code ↔ docs 符号表对比（docs 声明的 API 在 code 中存在） |
 | C4b-sem | 软 | docs 描述的行为在 code 中可实现（Checklist） |
+| C-arch-def1/2/3 | 硬 | 模块↔domain 所有权覆盖 / import 图 = 声明依赖 / 模块落目录（check_arch.py） |
+| C-arch-sem | 软 | 职责内聚性：模块职责与 owns 的行为分布一致（Checklist，v2.0 新增） |
+
+> v2.0：C-arch 检查 `artifacts + architecture.yaml`，位于 C2-def 之后、软条件之前执行。检查器：`python3 scripts/check_arch.py <root> --with-imports --json`。
 
 ## 硬条件检查（确定性，逐项执行）
 
@@ -56,6 +60,10 @@ L3 变异验证（must 级验收 + C3 通过后执行）：
 - [ ] data_models 与代码类型定义一致（schema → 类型映射）
 - [ ] 错误类型与 spec 枚举一致
 - [ ] 无超出 spec 的公开 API（公开符号集合对比）
+
+⚠️ **符号提取实现坑（h3chain 项目 8/31 实测修两处）**：
+1. `ast.FunctionDef` 不含异步函数——FastAPI 路由几乎全是 `async def`，漏了会误报"接口未实现"。必须 `(ast.FunctionDef, ast.AsyncFunctionDef)`。
+2. 不能用 `ast.walk` 提取公开符号——它会把类方法/嵌套函数也收进来，类方法被误判为越界公开 API。正确做法：只遍历 `tree.body` 顶层定义；FastAPI 前端路由函数改 `_index` 私有名或 spec 补录接口。
 
 ### C3：测试执行
 
@@ -138,14 +146,15 @@ L2 复核（异模型确认）→ 确认/否决
 ## 收敛判定
 
 ```python
-def judge(spec, tests, code, docs):
-    hard = {c1_def, c2_def, c3, c4b_def}
+def judge(spec, arch, tests, code, docs):
+    hard = {c1_def, c2_def, c3, c4b_def, c_arch_def}
     if not all(h.passed for h in hard.values()):
         return NotConverged(...)          # 门禁：硬条件全过才谈收敛
 
     consensus = {
         "c1_sem": 0.95, "c2_sem": 0.95,   # 客观计票（非 LLM 评分）
         "c4a": 0.90, "c4b_sem": 0.90,
+        "c_arch_sem": 0.90,               # v2.0：架构内聚共识率
     }
     must_covered = coverage_of(spec.behaviors, priority="must")
 
@@ -171,7 +180,8 @@ def judge(spec, tests, code, docs):
 |------|------|------|
 | spec_error | spec 内部矛盾/不可实现 | 解冻 → 回形成 Loop 修订 |
 | spec_gap | 实现暴露未定义情况 | 解冻 → 受影响决策点重确认 |
-| implementation_error | 代码偏离 spec | 重派 code |
+| arch_error | 架构缺陷：职责冲突/依赖方向错/划分不合理（v2.0 新增） | 解冻 architecture.yaml → 修订 → check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派。**不解冻功能 spec**（层次隔离；根因在 domain 划分时走 spec_error 上溯） |
+| implementation_error | 代码偏离 spec / 越界 import（C-arch-def2） | 重派 code（对齐架构） |
 | test_error | 测试缺失/错误 | 重派 tests |
 | doc_error | 文档不同步 | 重派 docs |
 

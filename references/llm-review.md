@@ -107,7 +107,45 @@ C4b-def         ────▶    C4a/C4b-sem 文档真实性
 （符号表存在）              （文档宣称 vs 实际能力）
 SQC-def         ────▶    SQC-sem 质量判断
 （schema/引用/模糊词）      （覆盖/矛盾/完整性）
+check_arch.py   ────▶    C-arch-sem 职责内聚复审
+（所有权/import图/目录）    （模块职责与行为分布是否匹配）
 ```
+
+## 架构内聚复审（C-arch-sem，v2.0 新增）
+
+**输入证据**（来自 check_arch.py --json）：
+
+- `facts.spec_domains`：各 domain spec 的 behaviors 分布
+- `facts.ownership`：模块 → owns 的 domain 映射
+- `facts.import_graph`（派生后）：模块间实际调用关系
+
+**Checklist（逐模块二分判定，投票共识率门槛 0.90）**：
+
+1. 模块 `owns` 的各 domain 的 behaviors，是否全部落在该模块声明的 `responsibilities` 语义范围内？
+   （反例：payment 模块 owns 的 domain 里 80% 的 behaviors 是 UI 渲染，但 responsibilities 只写了"支付流转"→ FAIL）
+2. `responsibilities` 是否互不重叠且不与其它模块职责冲突？（两模块都声称负责"用户会话"→ FAIL）
+3. `data_flows` 声明的跨模块数据流与 `depends_on` 方向一致？（payment→auth 有 data_flow 但 depends_on 缺失 → FAIL；反之亦然）
+4. 每个 cross_component behavior 的两端模块是否都有显式依赖声明？
+5. 模块 `path` 划分是否与 `directory_layout` 约定一致？
+
+**判定输出**（沿用结构化格式）：
+
+```json
+{
+  "layer": "c_arch_sem",
+  "items": [
+    {"id": "payment-core", "verdict": "cohesive | drifting | conflicting",
+     "evidence": "owns=payment 的 B012-B018 中 5/7 是表单渲染行为，responsibilities 未涵盖 UI",
+     "gap": "要么 UI 行为拆给 ui 模块，要么 responsibilities 补 UI 职责并重确认"}
+  ],
+  "summary": "2/3 模块内聚，1 drifting",
+  "blockers": []
+}
+```
+
+- `cohesive` 计通过；`drifting`（职责漂移）进风险清单，must 级 behaviors 涉及时要求处理；`conflicting`（职责冲突）计失败
+- **路由**：drifting/conflicting 属于架构层面问题 → 人工裁决：改代码对齐架构（implementation_error）或解冻 architecture.yaml（arch_error 回路）
+- 审计同全库规范：每个判定附证据（引用 architecture.yaml 哪个模块 + spec 哪些 behavior id），无证据判定无效
 
 ## 审计
 

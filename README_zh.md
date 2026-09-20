@@ -2,7 +2,7 @@
 
 # 🔄 SDDL — Spec-Driven Development Loop
 
-**以结构化 Spec 为单一事实来源的双 Loop 开发方法论（Agent Skill）**
+**以结构化 Spec + 架构为单一事实来源的三 Loop 开发方法论（Agent Skill）**
 
 > **语言切换：** [English](README.md) | [中文](README_zh.md)
 
@@ -24,7 +24,7 @@
 ## 目录
 
 - [为什么需要 SDDL？](#为什么需要-sddl)
-- [双 Loop 架构](#双-loop-架构)
+- [三 Loop 架构](#三-loop-架构)
 - [核心特性](#核心特性)
 - [快速开始](#快速开始)
 - [Skill 结构](#skill-结构)
@@ -33,23 +33,25 @@
 - [方法论核心](#方法论核心简述)
 - [证据基础](#证据基础)
 - [适用门槛](#适用门槛)
+- [v1.x 迁移](#v1x-迁移)
 - [License](#license)
 
 ## 为什么需要 SDDL？
 
-AI 编程时代的三个核心痛点：
+AI 编程时代的四个核心痛点：
 
 | 痛点 | 本质 | 后果 |
 |------|------|------|
 | **上下文漂移** | 对话越长，AI 越易遗忘早期约定 | 第 N 轮推翻第 3 轮的接口约定 |
 | **多 artifact 不同步** | 代码改了，测试/文档没跟上 | "文档谎言"被 AI 时代放大 |
+| **架构漂移** | AI 写代码时临场发明模块边界 | 复杂工程里 module 分工、目录结构无人守约 |
 | **验收主观化** | "感觉对了"代替"符合规格" | 无法审计、无法复现、无法交接 |
 
-对话式编程的问题在于：**上下文窗口有限，对话越长越容易漂移**。你跟 AI 聊了 50 轮，第 51 轮它已经忘了第 3 轮约定的接口格式。
+对话式编程的问题在于：**上下文窗口有限，对话越长越容易漂移**。你跟 AI 聊了 50 轮，第 51 轮它已经忘了第 3 轮约定的接口格式；更糟的是，没有任何东西约束它"这个函数该放进哪个模块"。
 
-**SDDL 的答案**：用稳定可全文加载的 Spec 做单一事实来源，用双 Loop 闭环保证质量和可审计性。
+**SDDL 的答案**：用稳定可全文加载的 Spec 做单一事实来源，用架构层钉死模块分工，用三 Loop 闭环保证质量和可审计性。
 
-## 双 Loop 架构
+## 三 Loop 架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -58,16 +60,23 @@ AI 编程时代的三个核心痛点：
 └───────────────────────────────────────────────┬─────────────────────┘
                                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
+│                   架构 Loop（回答"怎么分层"）v2.0                      │
+│  冻结 Specs ──▶ 模块划分 ──▶ C-arch检查 ──▶ 决策点确认 ──▶ 冻结架构   │
+└───────────────────────────────────────────────┬─────────────────────┘
+                                                ▼
+┌─────────────────────────────────────────────────────────────────────┐
 │                   派生 Loop（回答"怎么做对"）                           │
-│  冻结 Spec ──▶ tests/code/docs ──▶ C1-C4一致性检查 ──▶ 收敛           │
+│  双冻结 ──▶ tests/code/docs ──▶ C1-C4 + C-arch检查 ──▶ 收敛           │
 │        ▲                                        │                    │
 │        └──── spec缺陷 ──▶ 解冻回形成Loop ──▶ 重新冻结 ──┘             │
+│        └──── 架构缺陷 ──▶ 解冻架构Loop（不动功能spec）──▶ 重冻 ──┘    │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 - **形成 Loop**：保证"做对的事"——需求 → 访谈 → Spec 草稿（含决策点标记）→ SQC 质量检查 → 决策点人工确认 → 冻结
-- **派生 Loop**：保证"把事做对"——冻结 Spec → tests/code/docs 三件套同步派生 → C1-C4 分层一致性检查 → 收敛
-- **回写通道**：实现中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结（不绕过质量门禁）
+- **架构 Loop（v2.0 新增）**：保证"分层做对"——读冻结 specs 按职责内聚划分模块 → architecture.yaml（模块/依赖/目录/技术栈）→ C-arch 静态检查 + LLM 内聚复审 → 冻结
+- **派生 Loop**：保证"把事做对"——双冻结（spec + architecture）→ tests/code/docs 三件套同步派生 → C1-C4 + C-arch 分层一致性检查 → 收敛
+- **回写通道**：spec 缺陷 → 解冻回形成 Loop；架构缺陷 → 独立解冻架构（层次隔离，不连带功能 spec）；均不绕过质量门禁
 
 ## 核心特性
 
@@ -75,9 +84,10 @@ AI 编程时代的三个核心痛点：
 |------|------|
 | **决策点机制** | 模糊处 AI 不静默决定，标记为决策点，用户用 clarify 逐项确认（含自定义输入） |
 | **SQC 质量检查** | Spec 自身的质量门禁——**脚本确定性检查**（schema 合法/引用完整/可断言性）+ **agent LLM 语义审核**（行为覆盖/矛盾/完整性） |
-| **C1-C4 分层检查** | artifacts 与 spec 的一致性——**脚本确定性证据**（接口对比/测试执行/文档符号表）+ **agent LLM 语义审核**（测试是否真覆盖行为？代码是否真符合 spec？） |
+| **架构 Loop（v2.0）** | 模块划分/依赖/目录/技术栈进 `architecture.yaml`，C-arch 静态检查（所有权覆盖/import 图/落位目录）+ LLM 内聚复审，双冻结门禁 |
+| **C1-C4 + C-arch 分层检查** | artifacts 与 spec+架构的一致性——**脚本确定性证据**（接口对比/测试执行/文档符号表/越界 import）+ **agent LLM 语义审核**（测试是否真覆盖行为？代码是否真符合 spec？模块职责是否内聚？） |
 | **目录即状态** | 进度编码在目录结构里，中断恢复免费（配合 git commit 作为 checkpoint） |
-| **预算控制** | 形成/实现/修订三预算，量化降级路径，修订激励不惩罚诚实 |
+| **预算控制** | 形成/架构/实现/修订预算，量化降级路径，修订激励不惩罚诚实 |
 | **可审计** | 每个决策点确认记录、每次修订 CHANGELOG、每次检查报告 JSON，全程可追溯 |
 
 ## 快速开始（Agent 集成）
@@ -99,12 +109,15 @@ cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
 /sddl:spec        # 生成 Spec 草稿 + 决策点标记
 /sddl:confirm     # 决策点 clarify 确认（含自定义输入）
 /sddl:freeze      # SQC 检查 + 冻结
-/sddl:derive      # 从 spec 派生 tests/code/docs
-/sddl:verify      # C1-C4 一致性检查 + 收敛判定
+/sddl:arch        # 生成架构 spec（模块划分/依赖/目录/技术栈）v2.0
+/sddl:confirm     # 架构决策点确认
+/sddl:freeze      # C-arch 检查 + 冻结架构
+/sddl:derive      # 从 spec+架构派生 tests/code/docs
+/sddl:verify      # C1-C4 + C-arch 一致性检查 + 收敛判定
 /sddl:archive     # 变更归档
 ```
 
-**完整工作流**：`/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
+**完整工作流**：`/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:arch → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
 
 ### 方式 B：只用检查器脚本（无 agent 环境）
 
@@ -115,6 +128,10 @@ pip install pyyaml
 
 # SQC 检查（spec 冻结前）
 python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+
+# C-arch 架构检查（架构冻结前 / verify 时）
+python3 scripts/check_arch.py . --verbose                # 冻结前
+python3 scripts/check_arch.py . --with-imports --verbose # 派生后（含 import 图/目录检查）
 
 # C1-C4 一致性检查（verify 时）
 python3 scripts/check_c1_c4.py . --verbose
@@ -154,15 +171,15 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
 ```
 integrations/
 ├── hermes/                      Hermes Agent Skill（完整版）
-│   ├── SKILL.md                 主入口 + 8 个分阶段命令
-│   ├── references/ (5个)        渐进披露手册（按需加载，不一次全读）
-│   ├── scripts/ (3个)           检查器（与根目录 scripts/ 相同）
-│   └── templates/ (2个)         spec 骨架 + 决策点摘要
+│   ├── SKILL.md                 主入口 + 9 个分阶段命令
+│   ├── references/ (7个)        渐进披露手册（按需加载，不一次全读）
+│   ├── scripts/ (4个)           检查器（与根目录 scripts/ 相同）
+│   └── templates/ (3个)         spec/architecture 骨架 + 决策点摘要
 ├── claude-code/                 （规划中）
 └── opencode/                    （规划中）
 ```
 
-**为什么是 skill 而非普通工具**：SDDL 的 8 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
+**为什么是 skill 而非普通工具**：SDDL 的 9 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
 
 ## 多平台支持
 
@@ -177,7 +194,7 @@ SDDL 的**方法论核心是平台无关的**——`references/`（方法论手�
 | `integrations/claude-code/` | ✅ Claude Code | 规划中（利用 CLAUDE.md + slash command） |
 | `integrations/opencode/` | ✅ OpenCode | 规划中（利用 AGENTS.md） |
 
-**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 8 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `integrations/hermes/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
+**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 9 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `integrations/hermes/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
 
 ---
 
@@ -187,19 +204,21 @@ SDDL 的**方法论核心是平台无关的**——`references/`（方法论手�
 sddl/
 ├── scripts/                     检查器脚本（可直接运行）
 │   ├── check_sqc.py             SQC 检查（形成 Loop 门禁）
+│   ├── check_arch.py            C-arch 架构检查（架构 Loop 门禁，v2.0）
 │   ├── check_c1_c4.py           C1-C4 一致性检查（派生 Loop 门禁）
 │   └── sddl_status.py           状态恢复（目录即状态）
 ├── references/                  方法论手册（渐进披露）
 │   ├── formation-loop.md        形成 Loop 详细流程
+│   ├── architecture-loop.md     架构 Loop 详细流程（v2.0）
 │   ├── derivation-loop.md       派生 Loop 详细流程
 │   ├── spec-schema.md           Spec 五层结构
 │   ├── sqc-checklist.md         SQC 检查清单
-│   └── checker-matrix.md        C1-C4 检查矩阵
-├── templates/                   spec 骨架 + 决策点摘要模板
+│   └── checker-matrix.md        C1-C4 + C-arch 检查矩阵
+├── templates/                   spec/architecture 骨架 + 决策点摘要模板
 ├── examples/                    完整示例项目
 │   └── accounting/              记账/对账服务（从零到收敛）
 ├── integrations/                各平台 Agent 适配器（Hermes 已完成，Claude Code/OpenCode 规划中）
-├── docs/                        最终方案（v1.1）
+├── docs/                        方案文档 + v1→v2 迁移指南
 └── LICENSE
 ```
 
@@ -218,8 +237,8 @@ sddl/
 ### 收敛判定
 
 ```
-硬门禁：C1-def ∧ C2-def ∧ C3 ∧ C4b-def 全过（确定性）
-软共识：c1_sem≥0.95 ∧ c2_sem≥0.95 ∧ c4a≥0.90 ∧ c4b_sem≥0.90（Checklist 计票）
+硬门禁：C1-def ∧ C2-def ∧ C3 ∧ C4b-def ∧ C-arch-def 全过（确定性）
+软共识：c1_sem≥0.95 ∧ c2_sem≥0.95 ∧ c4a≥0.90 ∧ c4b_sem≥0.90 ∧ c_arch_sem≥0.90（Checklist 计票）
 且 must 覆盖 = 100% 且无 blocker violation → 收敛
 ```
 
@@ -248,6 +267,16 @@ SDDL 的设计经过文献验证（arXiv 论文）与三轮评审循环打磨：
 - **OpenSpec** (Fission-AI) — specs/+changes/+archive 变更管理实践
 
 完整证据链见 [`docs/SDDL-方案-v1.1.md`](docs/SDDL-方案-v1.1.md) 附录 A。
+
+## v1.x 迁移
+
+v2.0 新增架构 Loop（双 Loop → 三 Loop），v1.x 项目手工迁移（无自动脚本，设计决策）：
+
+- **已收敛不再开发**：不迁移，留档即可
+- **迭代中**：补 `sddl/architecture.yaml`（可从现有 `src/` 反向提取模块）→ `check_arch.py --with-imports` 修到 pass → 架构决策点补确认 → state.yaml 补 `arch_status: frozen`
+- **单模块小项目**：`single_module: true` 空架构也要生成并冻结（豁免划分，不豁免门禁）
+
+详见 [`docs/migration-v1-to-v2.md`](docs/migration-v1-to-v2.md)。
 
 ## 适用门槛
 

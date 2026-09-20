@@ -1,11 +1,17 @@
 # 派生 Loop 详细流程（Derivation Loop）
 
-> 回答"怎么做对"：冻结 Spec → tests/code/docs → C1-C4 收敛。本文件是 `/sddl:derive` `/sddl:verify` `/sddl:archive` 三个命令的详细执行手册。
+> 回答"怎么做对"：双冻结（功能 spec + architecture）→ tests/code/docs → C1-C4 + C-arch 收敛。本文件是 `/sddl:derive` `/sddl:verify` `/sddl:archive` 三个命令的详细执行手册。
 
 ## 阶段 1：派生（/sddl:derive）
 
 ### 目标
-从冻结 Spec 派生 tests / code / docs，保持三者与 spec 锁步。
+从冻结 Spec + 冻结架构派生 tests / code / docs，保持四者锁步。
+
+### 硬前置（v2.0：双冻结门禁）
+
+- `sddl/specs/*/spec.yaml` 全部 `status: frozen`
+- `sddl/architecture.yaml` 存在且 `meta.status: frozen`（state.yaml `arch_status: frozen`）
+- 缺任一 → 拒绝派生，提示先完成架构 Loop（见 architecture-loop.md）
 
 ### 派生顺序（重要）
 
@@ -28,6 +34,7 @@
 ### 代码派生规则
 - 实现 spec 声明的全部接口（C2-def 检查）
 - 不实现 non_goals（越界 = C2-def violation）
+- **按模块落位（v2.0）**：代码写进所属模块的 `path` 目录（C-arch-def3 检查）；跨模块调用只走被依赖模块的公开接口，且必须先在 architecture.yaml `depends_on` 声明（C-arch-def2 检查越界 import）
 - 实现细节自由（内部结构不写死），但公开面必须匹配 spec
 
 ### 文档派生规则
