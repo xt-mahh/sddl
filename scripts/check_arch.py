@@ -72,6 +72,21 @@ def collect_issues(root: Path, with_imports: bool):
     if dup:
         issues.append({"check": "C-arch-struct", "msg": f"模块名重复: {sorted(dup)}"})
 
+    # C-arch-struct：模块 path 重叠/嵌套禁止（文件归属无判据，def2/def3 会失效）
+    # 最长路径前缀归属是常见隐式约定，但依赖声明顺序，这里显式 fail 要求物理隔离
+    norm_paths = {}
+    for m in modules:
+        if not isinstance(m, dict) or not m.get("path"):
+            continue
+        p = str(m["path"]).rstrip("/")
+        for other, op in norm_paths.items():
+            if p.startswith(op + "/") or op.startswith(p + "/"):
+                issues.append({"check": "C-arch-struct",
+                               "msg": f"模块 {m['name']} 与 {other} 的 path 重叠/嵌套: {p} vs {op}"
+                                      f"（文件归属无判据；将子模块代码移入独立子目录）"})
+        norm_paths[m["name"]] = p
+    # single_module 豁免时 path 不参与检查
+
     for m in modules:
         if not isinstance(m, dict):
             continue
@@ -198,10 +213,23 @@ def check_imports(root: Path, modules):
             dir_issues.append({"check": "C-arch-def3",
                                "msg": f"模块 {m['name']} 声明目录不存在: {m.get('path')}"})
             continue
+        # 代码文件探测：Python 参考收集器只识别 .py；
+        # 目录存在但无 .py 时区分「空目录」与「非 Python 技术栈」——
+        # 后者显式降级警告（触发项目收集器构造，见 references/evidence-contract.md），
+        # 绝不静默给空 import 图（空证据会让 C-arch-def2 假 pass）
         py_files = sorted(mod_path.rglob("*.py"))
+        has_code = any(mod_path.rglob(f"*{ext}") for ext in
+                       (".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".go", ".rs", ".java"))
         if not py_files:
-            dir_issues.append({"check": "C-arch-def3",
-                               "msg": f"模块 {m['name']} 目录无 Python 文件: {m.get('path')}"})
+            if has_code:
+                issues.append({"check": "C-arch-def2",
+                               "msg": f"模块 {m['name']} 目录为非 Python 技术栈: {m.get('path')} —— "
+                                      f"参考收集器不适用，须按 evidence-contract.md 构造项目收集器"
+                                      f"（构造后落 sddl/checks/ 并 git 固化，C-arch-def2/def3 由其接管）"})
+            else:
+                dir_issues.append({"check": "C-arch-def3",
+                                   "msg": f"模块 {m['name']} 目录无代码文件: {m.get('path')}"})
+            continue
         # 每个 src 顶层包 = 一个模块，import 首段对齐
         deps = set()
         src_root = mod_path.parent

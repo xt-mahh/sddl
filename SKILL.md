@@ -1,7 +1,7 @@
 ---
 name: sddl
 description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:archive。"
-version: 2.0.0
+version: 2.1.0
 author: 小智
 license: MIT
 metadata:
@@ -198,6 +198,8 @@ python3 scripts/sddl_status.py .
 
 **不要用脚本启发式做语义判断**——字符串匹配会假阴性爆炸（T1 实测 C1-sem 0.48）。脚本是证据收集器，agent 是裁判。
 
+**证据契约与泛化（v2.1）**：内置脚本携带 Python 生态假设（`*.py`/`ast`/`src/` 包约定），非 Python 技术栈项目上代码级检查会**显式降级 fail**（绝不静默产出空证据——空证据 = 假 pass）。此时按 `references/evidence-contract.md` 构造**项目收集器**：agent 现场实现（输出与参考收集器同构的 `--json`）→ 落盘 `sddl/checks/` → git 固化 → 后续 verify 只重跑不重构。三层分工：**证据契约（框架）/ 参考收集器（框架，可选）/ 项目收集器（项目资产，构造一次固化）**。
+
 ## 何时读哪个 Reference
 
 按需加载，不一次全读（渐进披露）：
@@ -210,6 +212,7 @@ python3 scripts/sddl_status.py .
 | 决策点确认 | `templates/decision-summary.md` |
 | **生成架构（v2.0）** | **`references/architecture-loop.md` + `templates/architecture-template.yaml`** |
 | C-arch 检查 | `references/architecture-loop.md`（阶段 4）+ `references/checker-matrix.md` |
+| **非 Python 技术栈 / 收集器降级** | **`references/evidence-contract.md`（项目收集器构造规范，v2.1）** |
 | **架构选型调研（v2.0）** | **`references/research-notes.md`（contract 级 DP ≥3 候选触发）** |
 | **修 bug（v2.0）** | **`references/bugfix-lane.md`（轻量通道，先判 code-level / spec-level）** |
 | **项目宪法（v2.0）** | **`templates/constitution-template.md`（init 时建，条款号进 SQC/C-arch 引用）** |
@@ -247,7 +250,6 @@ python3 scripts/sddl_status.py .
 9. **测试间共享状态泄漏**——T1 实测：内存 store 跨测试共享导致断言失败。派生时必须加隔离 fixture（autouse 重置）；测试断言走公开接口，不直接访问内部 `_store`。
 10. **纯查询函数带副作用**--T1 实测：`detectDiscrepancy` 内部改 status 违反 spec B006（应保持 draft）。纯查询接口（返回报告/查询）不得修改状态，C2-sem 应检查。
 11. **凭记忆写验证/演示代码**--h3-continuity 实测：给自研模块写 demo 时凭印象猜 API（参数个数/不存在的 kwarg/自造数据流），连错 3 次。规则：**动手前先 read_file 读真实源码签名 + 用生产数据流契约（如 results.json 读写合并），不用合成 dict**。且单元自测全过 ≠ 集成可用--正是走真实数据流的 demo 暴露了 stored_params 从未写入、级联分支在生产中永不触发的死路 bug。verify 要覆盖"存档->载入->检测"完整闭环，不只测函数。
-12. **检查器的单测全绿 ≠ 检查器无洞**——v2.0 E2E 实测：check_arch.py 六个 fixture 场景全绿，但 fixture 的代码目录全是"架构声明过的"，"架构外新增幽灵模块"这个负面空间根本不在测试域里，注入 src/evil/ 立刻漏检。规则：**检查器必须用真实项目做端到端验证**，且 fixture 设计要显式覆盖"被检查对象之外"的世界（未声明目录/未注册文件/旁路入口），不能只测已声明的正例。
 
 ## Verification Checklist
 

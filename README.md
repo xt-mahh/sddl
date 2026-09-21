@@ -88,6 +88,7 @@ The problem with conversational programming: **context windows are finite, and t
 | **Decision Points** | Where requirements are ambiguous, the AI doesn't silently decide — it marks a decision point and the user confirms it via interactive prompts (with custom input support) |
 | **SQC Quality Check** | Quality gate for the spec itself — **deterministic checks by scripts** (schema validity / reference integrity / assertability) **+ semantic review by agent LLM** (behavior coverage / contradictions / completeness) |
 | **Architecture Loop (v2.0)** | Module partition / dependencies / directories / tech stack go into `architecture.yaml`; C-arch static checks (ownership coverage / import graph / directory placement) + LLM cohesion review; dual-freeze gate |
+| **Evidence Contract (v2.1)** | Deterministic evidence generalizes beyond Python: reference collectors explicitly **degrade-fail on non-Python stacks instead of silently emitting empty evidence** (empty evidence = false pass); agents build a per-project collector per `references/evidence-contract.md` — construct once, commit to git, rerun-only thereafter |
 | **C1-C4 + C-arch Layered Checks** | Consistency between artifacts and spec+architecture — **deterministic evidence by scripts** (interface comparison / test execution / doc symbol table / out-of-bounds imports) **+ semantic review by agent LLM** (does the test really cover the behavior? does the code really match the spec? are module responsibilities cohesive?) |
 | **Directory-as-State** | Progress is encoded in directory structure — interruption recovery is free (with git commits as checkpoints) |
 | **Budget Control** | Formation/architecture/implementation/revision budgets, quantified degradation paths, revision incentives that don't punish honesty |
@@ -216,7 +217,8 @@ sddl/
 │   ├── derivation-loop.md       Derivation Loop detailed workflow
 │   ├── spec-schema.md           Spec 5-layer structure
 │   ├── sqc-checklist.md         SQC check checklist
-│   └── checker-matrix.md        C1-C4 + C-arch check matrix
+│   ├── checker-matrix.md        C1-C4 + C-arch check matrix
+│   └── evidence-contract.md     Evidence contract & per-project collectors (v2.1)
 ├── templates/                   Spec/architecture skeletons + decision summary templates
 ├── examples/                    Complete example projects
 │   └── accounting/              Bookkeeping/reconciliation service (zero to converged)
