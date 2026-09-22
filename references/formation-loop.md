@@ -218,7 +218,7 @@ sddl/changes/<change-name>/
 ```
 
 生命周期：`propose → review（人工/AI 审）→ apply → verify → archive`
-归档时：增量 delta 合并入 specs/ → 受影响 artifacts 标记 STALE → 触发重派生 → 受影响决策点重确认（L2/L3）→ 重新冻结。
+归档时：增量 delta 合并入 specs/ → 受影响 artifacts 标记 STALE → **按序重验架构**（check_arch + 受影响决策点 + 重冻 architecture.yaml）→ 触发重派生 → 受影响决策点重确认（L2/L3）→ 重新冻结。
 
 ### ping-pong 检测
 

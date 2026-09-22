@@ -1,7 +1,7 @@
 ---
 name: sddl
 description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:archive。"
-version: 2.0.0
+version: 2.1.0
 author: 小智
 license: MIT
 metadata:
@@ -58,7 +58,7 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 
 ## 核心原则
 
-1. **Spec 是神谕，但可被质疑**：派生中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结（走完整质量门禁，不绕过）
+1. **Spec 是神谕，但可被质疑**：派生中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结 → **按序重验架构** → 回派生（走完整质量门禁，不绕过）
 2. **确定性优先**：能用静态分析/schema/测试执行解决的，绝不用 LLM 猜
 3. **收敛是工程系统**：硬条件门禁 + 软条件共识率 + 预算约束 + 人工兜底
 4. **决策点不静默**：模糊处 AI 给默认值 + 标记决策点，用户确认后才冻结
@@ -77,7 +77,8 @@ current_phase: derivation    # 双冻结齐备后推进
 
 - 功能 spec 先冻结（DP-001 确认：架构基于冻结的功能边界划分，不反向切分需求）
 - 小项目豁免：`single_module: true` 的空 modules 架构也必须生成并冻结——豁免的是划分，不是门禁
-- 架构修订走独立回路（arch_error → 解冻 architecture.yaml → 修订 → 重冻），**不解冻功能 spec**（层次隔离）
+- 架构修订走 arch_error 路由，**先归因**：根因在 spec → 走 spec_error 上溯并顺序传播；非 spec 引起 → 独立解冻 architecture.yaml → 修订 → 重冻
+- **顺序传播铁律**：spec 修订重冻后必须按序重验架构（check_arch + 受影响决策点 + 重冻 architecture.yaml）再回派生，不允许跳过架构直接验 derive
 
 ## 目录即状态（Convention over Config）
 
@@ -158,7 +159,7 @@ last_check: { type: arch, id: sys-v1.0.0, result: pass, at: 2026-09-20T10:00 }
 /sddl:derive → /sddl:verify → (收敛) → /sddl:archive
      │              │
      └─ 路由 ──────┘
-       （violation → 重派 code/tests/docs / arch_error 解冻架构 / 解冻回形成 Loop）
+       （violation → 重派 code/tests/docs / arch_error 先归因再路由 / 解冻回形成 Loop → 重冻后按序重验架构）
 ```
 
 | 命令 | 关键动作 | 检查点 |
@@ -198,6 +199,8 @@ python3 scripts/sddl_status.py .
 
 **不要用脚本启发式做语义判断**——字符串匹配会假阴性爆炸（T1 实测 C1-sem 0.48）。脚本是证据收集器，agent 是裁判。
 
+**证据契约与泛化（v2.1）**：内置脚本携带 Python 生态假设（`*.py`/`ast`/`src/` 包约定），非 Python 技术栈项目上代码级检查会**显式降级 fail**（绝不静默产出空证据——空证据 = 假 pass）。此时按 `references/evidence-contract.md` 构造**项目收集器**：agent 现场实现（输出与参考收集器同构的 `--json`）→ 落盘 `sddl/checks/` → git 固化 → 后续 verify 只重跑不重构。三层分工：**证据契约（框架）/ 参考收集器（框架，可选）/ 项目收集器（项目资产，构造一次固化）**。
+
 ## 何时读哪个 Reference
 
 按需加载，不一次全读（渐进披露）：
@@ -210,6 +213,7 @@ python3 scripts/sddl_status.py .
 | 决策点确认 | `templates/decision-summary.md` |
 | **生成架构（v2.0）** | **`references/architecture-loop.md` + `templates/architecture-template.yaml`** |
 | C-arch 检查 | `references/architecture-loop.md`（阶段 4）+ `references/checker-matrix.md` |
+| **非 Python 技术栈 / 收集器降级** | **`references/evidence-contract.md`（项目收集器构造规范，v2.1）** |
 | **架构选型调研（v2.0）** | **`references/research-notes.md`（contract 级 DP ≥3 候选触发）** |
 | **修 bug（v2.0）** | **`references/bugfix-lane.md`（轻量通道，先判 code-level / spec-level）** |
 | **项目宪法（v2.0）** | **`templates/constitution-template.md`（init 时建，条款号进 SQC/C-arch 引用）** |
@@ -240,14 +244,13 @@ python3 scripts/sddl_status.py .
 2. **决策点静默决定**——模糊处不标记 DP 直接写默认值 = 用户意图失真。任何"替用户选择"必须登记 DP。
 3. **检查器自证循环**——信任 AI 贴的标签。C1-def 必须做结构反推（解析测试 AST），不信任标签。
 4. **语义检查绝对分数**——LLM 打 0-100 分不可信。用 Checklist 二分 + 投票共识率（客观计票）。
-5. **回写绕过质量门禁**——spec_error 直接改 spec = 自我放松标准。必须解冻 → 回形成 Loop → 重新冻结。
+5. **回写绕过质量门禁**——spec_error 直接改 spec = 自我放松标准。必须解冻 → 回形成 Loop → 重新冻结 → **按序重验架构** → 回派生。
 6. **状态文件膨胀**——把所有进度写进 state.yaml = 又回到"文档谎言"。state.yaml 只存指针，详情在文件本身。
 7. **预算无记录**——不更新 state.yaml 预算 = 成本失控。每命令结束更新。
 8. **语义检查用粗糙字符串匹配**——T1 实测：关键词匹配把 C1-sem 打到 0.48（假阴性爆炸）。优先用 Checklist LLM 投票；启发式仅作 fallback，且必须语义化（AST 提取断言 + 结构化关键词），首轮结果不可信，需人工复核。
 9. **测试间共享状态泄漏**——T1 实测：内存 store 跨测试共享导致断言失败。派生时必须加隔离 fixture（autouse 重置）；测试断言走公开接口，不直接访问内部 `_store`。
 10. **纯查询函数带副作用**--T1 实测：`detectDiscrepancy` 内部改 status 违反 spec B006（应保持 draft）。纯查询接口（返回报告/查询）不得修改状态，C2-sem 应检查。
 11. **凭记忆写验证/演示代码**--h3-continuity 实测：给自研模块写 demo 时凭印象猜 API（参数个数/不存在的 kwarg/自造数据流），连错 3 次。规则：**动手前先 read_file 读真实源码签名 + 用生产数据流契约（如 results.json 读写合并），不用合成 dict**。且单元自测全过 ≠ 集成可用--正是走真实数据流的 demo 暴露了 stored_params 从未写入、级联分支在生产中永不触发的死路 bug。verify 要覆盖"存档->载入->检测"完整闭环，不只测函数。
-12. **检查器的单测全绿 ≠ 检查器无洞**——v2.0 E2E 实测：check_arch.py 六个 fixture 场景全绿，但 fixture 的代码目录全是"架构声明过的"，"架构外新增幽灵模块"这个负面空间根本不在测试域里，注入 src/evil/ 立刻漏检。规则：**检查器必须用真实项目做端到端验证**，且 fixture 设计要显式覆盖"被检查对象之外"的世界（未声明目录/未注册文件/旁路入口），不能只测已声明的正例。
 
 ## Verification Checklist
 

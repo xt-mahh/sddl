@@ -71,15 +71,18 @@ The problem with conversational programming: **context windows are finite, and t
 │  Dual Freeze ─▶ tests/code/docs ─▶ C1-C4 + C-arch Checks ─▶          │
 │  Converged                                                          │
 │        ▲                                        │                    │
-│        └──── spec defects ─▶ unfreeze ─▶ back to Formation Loop ─┘  │
-│        └──── arch defects ─▶ unfreeze architecture (specs stay) ─┘  │
+│        └─ spec defects ─▶ Formation Loop ─▶ refreeze specs ─▶ re-run │
+│           Architecture Loop (C-arch re-verify) ─▶ back to derivation ─┘
+│        └─ arch defects ─▶ attribute first: spec-caused ─▶ spec_error │
+│           upstream (sequential propagation); otherwise unfreeze      │
+│           architecture only ─▶ revise & refreeze ─▶ re-derive ───────┘
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Formation Loop**: guarantees "doing the right thing" — requirements → interview → spec draft (with decision-point markers) → SQC quality check → human confirmation of decision points → freeze
 - **Architecture Loop (new in v2.0)**: guarantees "splitting it right" — partition frozen specs into modules by responsibility cohesion → architecture.yaml (modules/dependencies/directories/tech stack) → C-arch static checks + LLM cohesion review → freeze
 - **Derivation Loop**: guarantees "doing the thing right" — dual freeze (spec + architecture) → synchronized derivation of tests/code/docs → C1-C4 + C-arch layered consistency checks → convergence
-- **Write-back channel**: spec defects → unfreeze back to Formation Loop; architecture defects → independently unfreeze the architecture (layer isolation — functional specs stay frozen); never bypassing the quality gate
+- **Write-back channel**: spec defects → unfreeze back to Formation Loop; architecture defects → **attribute first** — spec-caused ones route upstream via spec_error with sequential propagation, otherwise unfreeze the architecture only. After a spec revision refreezes, **re-run the Architecture Loop (C-arch + affected decision points) before returning to derivation** — never skip the architecture stage; never bypassing the quality gate
 
 ## Core Features
 
@@ -88,7 +91,6 @@ The problem with conversational programming: **context windows are finite, and t
 | **Decision Points** | Where requirements are ambiguous, the AI doesn't silently decide — it marks a decision point and the user confirms it via interactive prompts (with custom input support) |
 | **SQC Quality Check** | Quality gate for the spec itself — **deterministic checks by scripts** (schema validity / reference integrity / assertability) **+ semantic review by agent LLM** (behavior coverage / contradictions / completeness) |
 | **Architecture Loop (v2.0)** | Module partition / dependencies / directories / tech stack go into `architecture.yaml`; C-arch static checks (ownership coverage / import graph / directory placement) + LLM cohesion review; dual-freeze gate |
-| **Evidence Contract (v2.1)** | Deterministic evidence generalizes beyond Python: reference collectors explicitly **degrade-fail on non-Python stacks instead of silently emitting empty evidence** (empty evidence = false pass); agents build a per-project collector per `references/evidence-contract.md` — construct once, commit to git, rerun-only thereafter |
 | **C1-C4 + C-arch Layered Checks** | Consistency between artifacts and spec+architecture — **deterministic evidence by scripts** (interface comparison / test execution / doc symbol table / out-of-bounds imports) **+ semantic review by agent LLM** (does the test really cover the behavior? does the code really match the spec? are module responsibilities cohesive?) |
 | **Directory-as-State** | Progress is encoded in directory structure — interruption recovery is free (with git commits as checkpoints) |
 | **Budget Control** | Formation/architecture/implementation/revision budgets, quantified degradation paths, revision incentives that don't punish honesty |
@@ -217,8 +219,7 @@ sddl/
 │   ├── derivation-loop.md       Derivation Loop detailed workflow
 │   ├── spec-schema.md           Spec 5-layer structure
 │   ├── sqc-checklist.md         SQC check checklist
-│   ├── checker-matrix.md        C1-C4 + C-arch check matrix
-│   └── evidence-contract.md     Evidence contract & per-project collectors (v2.1)
+│   └── checker-matrix.md        C1-C4 + C-arch check matrix
 ├── templates/                   Spec/architecture skeletons + decision summary templates
 ├── examples/                    Complete example projects
 │   └── accounting/              Bookkeeping/reconciliation service (zero to converged)

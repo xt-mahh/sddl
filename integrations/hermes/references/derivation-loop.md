@@ -104,8 +104,9 @@ C4b-def 失败 → docs 声明的 API 不存在 → 路由 doc_error
 
 | 分类 | 动作 | 需人工 |
 |------|------|--------|
-| spec_error | 解冻 → 回形成 Loop 修订（SQC + 决策点重确认 + 重新冻结） | 是（必须） |
+| spec_error | 解冻 → 回形成 Loop 修订（SQC + 决策点重确认 + 重新冻结）→ **按序重验架构**（重过 check_arch + 受影响决策点 + 重冻 architecture.yaml）→ 回派生 | 是（必须） |
 | spec_gap | 解冻 → 受影响决策点重确认 | 是（提案制） |
+| arch_error | **先归因**：根因在 spec/domain 划分 → 升级为 spec_error 上溯（顺序传播）；否则独立解冻 architecture.yaml → 修订 → 重过 check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派 | 归因裁决时需确认 |
 | implementation_error | 重派 code | 否 |
 | test_error | 重派 tests | 否 |
 | doc_error | 重派 docs | 否 |

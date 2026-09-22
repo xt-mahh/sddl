@@ -68,15 +68,16 @@ AI 编程时代的四个核心痛点：
 │                   派生 Loop（回答"怎么做对"）                           │
 │  双冻结 ──▶ tests/code/docs ──▶ C1-C4 + C-arch检查 ──▶ 收敛           │
 │        ▲                                        │                    │
-│        └──── spec缺陷 ──▶ 解冻回形成Loop ──▶ 重新冻结 ──┘             │
-│        └──── 架构缺陷 ──▶ 解冻架构Loop（不动功能spec）──▶ 重冻 ──┘    │
+│        └─ spec缺陷 ─▶ 解冻回形成Loop ─▶ 重冻spec ─▶ 按序重验架构 ─▶ 回派生 ─┘
+│        └─ 架构缺陷 ─▶ 先归因：根因在spec ─▶ 上溯spec_error（顺序传播）     ─┘
+│                           否则才独立解冻架构 ─▶ 修订重冻 ─▶ 重派受影响模块 ─┘
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 - **形成 Loop**：保证"做对的事"——需求 → 访谈 → Spec 草稿（含决策点标记）→ SQC 质量检查 → 决策点人工确认 → 冻结
 - **架构 Loop（v2.0 新增）**：保证"分层做对"——读冻结 specs 按职责内聚划分模块 → architecture.yaml（模块/依赖/目录/技术栈）→ C-arch 静态检查 + LLM 内聚复审 → 冻结
 - **派生 Loop**：保证"把事做对"——双冻结（spec + architecture）→ tests/code/docs 三件套同步派生 → C1-C4 + C-arch 分层一致性检查 → 收敛
-- **回写通道**：spec 缺陷 → 解冻回形成 Loop；架构缺陷 → 独立解冻架构（层次隔离，不连带功能 spec）；均不绕过质量门禁
+- **回写通道**：spec 缺陷 → 解冻回形成 Loop；架构缺陷 → **先归因**——根因在 spec/domain 划分则上溯 spec_error 并顺序传播，否则才独立解冻架构。spec 修订重冻后**按序重验架构（C-arch + 受影响决策点）再回派生**，不跳过架构环节；均不绕过质量门禁
 
 ## 核心特性
 
@@ -84,8 +85,7 @@ AI 编程时代的四个核心痛点：
 |------|------|
 | **决策点机制** | 模糊处 AI 不静默决定，标记为决策点，用户用 clarify 逐项确认（含自定义输入） |
 | **SQC 质量检查** | Spec 自身的质量门禁——**脚本确定性检查**（schema 合法/引用完整/可断言性）+ **agent LLM 语义审核**（行为覆盖/矛盾/完整性） |
-| **架构 Loop（v2.0）** | 模块划分/依赖/目录/技术栈进入 `architecture.yaml`；C-arch 静态检查（所有权覆盖/import 图/目录落位）+ LLM 内聚复审；双冻结门禁 |
-| **证据契约（v2.1）** | 确定性证据泛化到 Python 之外：参考收集器在非 Python 技术栈上**显式降级报错而非静默产出空证据**（空证据 = 假 pass）；agent 按 `references/evidence-contract.md` 构造项目级收集器——构造一次、git 固化、此后只重跑不重构 |
+| **架构 Loop（v2.0）** | 模块划分/依赖/目录/技术栈进 `architecture.yaml`，C-arch 静态检查（所有权覆盖/import 图/落位目录）+ LLM 内聚复审，双冻结门禁 |
 | **C1-C4 + C-arch 分层检查** | artifacts 与 spec+架构的一致性——**脚本确定性证据**（接口对比/测试执行/文档符号表/越界 import）+ **agent LLM 语义审核**（测试是否真覆盖行为？代码是否真符合 spec？模块职责是否内聚？） |
 | **目录即状态** | 进度编码在目录结构里，中断恢复免费（配合 git commit 作为 checkpoint） |
 | **预算控制** | 形成/架构/实现/修订预算，量化降级路径，修订激励不惩罚诚实 |
@@ -214,8 +214,7 @@ sddl/
 │   ├── derivation-loop.md       派生 Loop 详细流程
 │   ├── spec-schema.md           Spec 五层结构
 │   ├── sqc-checklist.md         SQC 检查清单
-│   ├── checker-matrix.md        C1-C4 + C-arch 检查矩阵
-│   └── evidence-contract.md     证据契约与项目级收集器（v2.1）
+│   └── checker-matrix.md        C1-C4 + C-arch 检查矩阵
 ├── templates/                   spec/architecture 骨架 + 决策点摘要模板
 ├── examples/                    完整示例项目
 │   └── accounting/              记账/对账服务（从零到收敛）

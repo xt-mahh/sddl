@@ -65,7 +65,7 @@ arch_status: frozen          # 新增：architecture 状态
 current_phase: derivation    # 双冻结齐备后推进
 ```
 
-**架构修订回路**（与 spec 修订平行）：派生中发现架构缺陷 → 路由 `arch_error` → 解冻 architecture.yaml → 修订 → 重过 check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派。**注意**：架构解冻不解冻功能 spec（层次隔离），除非缺陷根因在 domain 划分（→ 走 spec_error 上溯）。
+**架构修订回路**（与 spec 修订衔接）：派生中发现架构缺陷 → 路由 `arch_error` → **先归因（强制第一步）**——判断根因是否在功能 spec/domain 划分：是 → 升级 spec_error 上溯（解冻 spec → 修订 → 重冻 → **按序重验架构** → 回派生，顺序传播）；否 → 独立解冻 architecture.yaml → 修订 → 重过 check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派。**顺序原则**：三 Loop 是顺序依赖（形成 → 架构 → 派生），上游任何修订重冻后，下游必须按序重验——spec 重冻后必须重验架构再回派生，不允许跳过架构直接验 derive。
 
 ## 阶段 4：派生中的 C-arch 维度（/sddl:verify 扩展）
 
@@ -87,5 +87,5 @@ current_phase: derivation    # 双冻结齐备后推进
 1. **跳过架构 Loop 直接派生**——单模块小项目也必须生成 `single_module: true` 并冻结，否则双冻结门禁永不满足。
 2. **architecture.yaml 先于 spec 冻结**——违反 DP-001 确认的顺序，架构没有功能佐证会拍脑袋；check_arch 不拦（时序是流程纪律），/sddl:arch 的输入检查拦。
 3. **模块划分静默决定**——划分方案本身是最高影响的决策点，不登记 DP 直接冻结 = 架构失真。
-4. **架构修订顺手改 spec**——层次隔离：arch_error 只解冻 architecture.yaml，动功能 spec 必须显式走 spec_error 上溯回路。
+4. **架构修订顺手改 spec**——arch_error 的正确路径是**先归因**：默认怀疑根因在 spec（domain 划分/接口契约），是则显式走 spec_error 上溯 + 顺序传播；确认非 spec 引起才独立解冻 architecture.yaml。既不许顺手改，也不许默认避开 spec——避开 = 掩盖上游缺陷。
 5. **responsibilities 写成技术名词堆**——它是 C-arch-sem 的唯一审点，要写"这个模块对外承担什么职责"（业务语言），不是"用了什么库"。

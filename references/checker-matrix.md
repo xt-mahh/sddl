@@ -178,9 +178,9 @@ def judge(spec, arch, tests, code, docs):
 
 | 分类 | 触发 | 动作 |
 |------|------|------|
-| spec_error | spec 内部矛盾/不可实现 | 解冻 → 回形成 Loop 修订 |
+| spec_error | spec 内部矛盾/不可实现 | 解冻 → 回形成 Loop 修订 → 重冻后按序重验架构再回派生 |
 | spec_gap | 实现暴露未定义情况 | 解冻 → 受影响决策点重确认 |
-| arch_error | 架构缺陷：职责冲突/依赖方向错/划分不合理（v2.0 新增） | 解冻 architecture.yaml → 修订 → check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派。**不解冻功能 spec**（层次隔离；根因在 domain 划分时走 spec_error 上溯） |
+| arch_error | 架构缺陷：职责冲突/依赖方向错/划分不合理（v2.0 新增） | **先归因**：根因在 spec/domain 划分 → 升级 spec_error 上溯并顺序传播（spec 重冻后按序重验架构再回派生）；否则独立解冻 architecture.yaml → 修订 → check_arch + 受影响决策点重确认 → 重冻 → 受影响模块重派 |
 | implementation_error | 代码偏离 spec / 越界 import（C-arch-def2） | 重派 code（对齐架构） |
 | test_error | 测试缺失/错误 | 重派 tests |
 | doc_error | 文档不同步 | 重派 docs |
