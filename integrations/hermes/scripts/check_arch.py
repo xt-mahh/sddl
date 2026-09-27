@@ -2,7 +2,7 @@
 """SDDL v2.0 架构检查器（架构 Loop 门禁 + 派生 Loop C-arch 维度）
 
 用法:
-    python3 check_arch.py <project_root> [--json] [--verbose]
+    python check_arch.py <project_root> [--json] [--verbose]
 
 检查项:
     C-arch-def1 模块↔domain spec 所有权双向覆盖
@@ -191,7 +191,7 @@ def collect_issues(root: Path, with_imports: bool):
 
     # ---------- C-arch-def2/def3 import 图与目录（派生后） ----------
     if with_imports:
-        violations, dir_issues, import_graph = check_imports(root, modules)
+        violations, dir_issues, import_graph = check_imports(root, modules, single)
         issues += violations + dir_issues
         facts["import_graph"] = import_graph
 
@@ -202,7 +202,7 @@ def module_name_to_pkg(module_name: str) -> str:
     return module_name.replace("-", "_")
 
 
-def check_imports(root: Path, modules):
+def check_imports(root: Path, modules, single_module=False):
     issues = []
     dir_issues = []
     import_graph = {}
@@ -277,6 +277,11 @@ def check_imports(root: Path, modules):
                 if not has_py:
                     continue
             if child.is_dir() and child.name not in declared_paths:
+                if single_module:
+                    # single_module: true 豁免模块划分——src/ 顶层包均属唯一模块，
+                    # 不要求登记 modules.path（豁免的是划分，不是门禁：
+                    # struct/def1 检查仍全部生效）
+                    continue
                 dir_issues.append({"check": "C-arch-def3",
                                    "msg": f"src/ 下存在未声明模块的代码目录: {child.name}"
                                           f"（architecture.yaml 未登记，越界 import 逃逸）"})

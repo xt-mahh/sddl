@@ -20,8 +20,8 @@
 ### 1. 收集证据（脚本执行）
 
 ```
-python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --json
-python3 scripts/check_c1_c4.py . --json
+python scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --json
+python scripts/check_c1_c4.py . --json
 ```
 
 - 脚本输出**事实**：schema 是否合法、引用是否完整、测试是否通过、接口是否存在

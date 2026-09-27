@@ -2,7 +2,7 @@
 """SDDL SQC 检查器（形成 Loop 门禁）
 
 用法:
-    python3 check_sqc.py <spec.yaml> [--json] [--verbose]
+    python check_sqc.py <spec.yaml> [--json] [--verbose]
 
 检查项:
     SQC-def-1 schema 合法

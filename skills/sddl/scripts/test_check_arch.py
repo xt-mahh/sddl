@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """check_arch.py fixture 测试（v2.0 重构暂存区自测）
 
-场景:
-  T1 pass       合法双模块架构
-  T2 fail       domain 无 owner + 多 owner
-  T3 fail       越界 import（--with-imports）
-  T4 fail       依赖成环
-  T5 pass       single_module 豁免
+场景 T1-T11（见文件内场景表）：
+  pass: 双模块合法 / single_module 豁免（含 src 代码 + --with-imports）/ 并行组拓扑 / 资源目录不误报
+  fail: 无 owner / 越界 import / 依赖成环 / 幽灵模块目录 / path 重叠 / 非 Python 显式降级
 """
 import json
 import shutil
@@ -184,6 +181,15 @@ rc, out = run(root, ["--with-imports"])
 ok = rc == 1 and any(
     i["check"] == "C-arch-def2" and "非 Python 技术栈" in i["msg"] for i in out["issues"])
 results.append(("T10 fail 非Python显式降级", ok, out))
+
+# T11 pass: single_module + src/ 有代码 + --with-imports（豁免划分，不豁免门禁）
+# 回归：def3 幽灵模块检查曾未豁免 single_module，导致合法单模块项目派生后必挂
+root = build_project("t11", make_arch([], single=True), ["only"],
+    code={
+        "src/only_service/__init__.py": "def f():\n    return 1\n",
+    })
+rc, out = run(root, ["--with-imports"])
+results.append(("T11 pass 单模块src代码", rc == 0 and out["pass"], out))
 
 print(f"{'场景':<28}{'结果':<6}说明")
 all_ok = True

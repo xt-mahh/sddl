@@ -174,17 +174,17 @@ last_check: { type: arch, id: sys-v1.0.0, result: pass, at: 2026-09-20T10:00 }
 
 ```bash
 # SQC 确定性检查（形成 Loop 门禁）—— 脚本给出事实
-python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+python scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
 # C-arch 确定性检查（架构 Loop 门禁 + 派生 C-arch 维度）—— v2.0
-python3 scripts/check_arch.py . --verbose                # 冻结前（struct + def1）
-python3 scripts/check_arch.py . --with-imports --verbose # 派生后（+ def2 import 图 / def3 目录）
+python scripts/check_arch.py . --verbose                # 冻结前（struct + def1）
+python scripts/check_arch.py . --with-imports --verbose # 派生后（+ def2 import 图 / def3 目录）
 
 # C1-C4 确定性检查（派生 Loop 门禁）—— 脚本给出事实
-python3 scripts/check_c1_c4.py . --verbose
+python scripts/check_c1_c4.py . --verbose
 
 # 状态恢复（中断后）—— 扫目录输出当前进度 + 下一步命令
-python3 scripts/sddl_status.py .
+python scripts/sddl_status.py .
 ```
 
 - 退出码：0 = pass/converged，1 = fail（可挂 CI）

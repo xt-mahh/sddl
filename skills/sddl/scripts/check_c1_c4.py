@@ -2,8 +2,8 @@
 """SDDL C1-C4 一致性检查器（派生 Loop 门禁）
 
 用法:
-    python3 check_c1_c4.py <project_dir> [--domain <name>] [--json] [--verbose]
-    python3 check_c1_c4.py <spec.yaml> <src_dir> <tests_dir> <docs_dir> [--json]
+    python check_c1_c4.py <project_dir> [--domain <name>] [--json] [--verbose]
+    python check_c1_c4.py <spec.yaml> <src_dir> <tests_dir> <docs_dir> [--json]
 
 检查:
     C1-def  验收覆盖 + 结构反推（L1 标签 / L2 AST 断言 / L3 变异可选）
@@ -20,6 +20,7 @@
 import argparse
 import ast
 import json
+import os
 import re
 import subprocess
 import sys
@@ -127,10 +128,15 @@ def run_c2_def(spec, code_src: str) -> dict:
 
 def run_c3(tests_dir: Path, src_dir: Path) -> dict:
     """C3: 测试执行"""
-    env = {"PYTHONPATH": str(src_dir), "PATH": "/usr/bin:/bin"}
+    # 继承当前环境：Windows 下清空 PATH/SYSTEMROOT 会让子进程 pytest 无法运行
+    # （原 "PATH": "/usr/bin:/bin" 是 Unix 假设）。仅注入 PYTHONPATH 供 tests import src 包
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(src_dir)
     proc = subprocess.run(
-        ["python3", "-m", "pytest", str(tests_dir), "-q"],
-        capture_output=True, text=True, env=env, cwd=str(src_dir.parent))
+        [sys.executable, "-m", "pytest", str(tests_dir), "-q"],
+        capture_output=True, text=True, env=env, cwd=str(src_dir.parent),
+        # 中文 Windows 上 pytest 管道输出为 GBK，按 UTF-8 强解会崩；容错解码保 ASCII 摘要可解析
+        encoding="utf-8", errors="replace")
     out = proc.stdout + proc.stderr
     m = re.search(r"(\d+) passed", out)
     n_pass = int(m.group(1)) if m else 0

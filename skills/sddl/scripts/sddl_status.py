@@ -2,7 +2,7 @@
 """SDDL 状态恢复器（目录即状态）
 
 用法:
-    python3 sddl_status.py [project_dir]
+    python sddl_status.py [project_dir]
 
 扫目录结构判断当前进度，输出恢复建议（对应 /sddl:* 命令）。
 无对话记忆也能恢复——进度编码在文件存在性里。
