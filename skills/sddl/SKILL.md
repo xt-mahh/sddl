@@ -1,7 +1,7 @@
 ---
 name: sddl
 description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:bugfix /sddl:archive。"
-version: 2.2.0
+version: 2.2.1
 author: 小智
 license: MIT
 metadata:
@@ -60,7 +60,7 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 
 ## 核心原则
 
-1. **Spec 是神谕，但可被质疑**：派生中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结（走完整质量门禁，不绕过）
+1. **Spec 是神谕，但可被质疑**：派生中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结 → **按序重验架构** → 回派生（走完整质量门禁，不绕过）
 2. **确定性优先**：能用静态分析/schema/测试执行解决的，绝不用 LLM 猜
 3. **收敛是工程系统**：硬条件门禁 + 软条件共识率 + 预算约束 + 人工兜底
 4. **决策点不静默**：模糊处 AI 给默认值 + 标记决策点，用户确认后才冻结
@@ -77,9 +77,10 @@ arch_status: frozen          # 架构 Loop 完成（新增）
 current_phase: derivation    # 双冻结齐备后推进
 ```
 
-- 功能 spec 先冻结（DP-001 确认：架构基于冻结的功能边界划分，不反向切分需求）
+- 功能 spec 先冻结（框架决策：架构基于冻结的功能边界划分，不反向切分需求）
 - 小项目豁免：`single_module: true` 的空 modules 架构也必须生成并冻结——豁免的是划分，不是门禁
-- 架构修订走独立回路（arch_error → 解冻 architecture.yaml → 修订 → 重冻），**不解冻功能 spec**（层次隔离）
+- 架构修订走 arch_error 路由，**先归因**：根因在 spec → 走 spec_error 上溯并顺序传播；非 spec 引起 → 独立解冻 architecture.yaml → 修订 → 重冻
+- **顺序传播铁律**：spec 修订重冻后必须按序重验架构（check_arch + 受影响决策点 + 重冻 architecture.yaml）再回派生，不允许跳过架构直接验 derive
 
 ## 目录即状态（Convention over Config）
 
@@ -89,6 +90,7 @@ current_phase: derivation    # 双冻结齐备后推进
 <project>/
 ├── sddl/
 │   ├── constitution.md           # v2.0（可选）：项目宪法——不可变原则，高于 spec/架构
+│   ├── requirements.md           # 访谈产出（存在 = interview 完成；sddl_status 据此显示"需求"进度）
 │   ├── specs/                    # 存在 = 访谈完成，spec 已生成
 │   │   └── <domain>/spec.yaml    # status: frozen = 冻结完成
 │   ├── architecture.yaml         # v2.0：存在 = 架构 Loop 已开始；frozen = 完成
@@ -160,7 +162,7 @@ last_check: { type: arch, id: sys-v1.0.0, result: pass, at: 2026-09-20T10:00 }
 /sddl:derive → /sddl:verify → (收敛) → /sddl:archive
      │              │
      └─ 路由 ──────┘
-       （violation → 重派 code/tests/docs / arch_error 解冻架构 / 解冻回形成 Loop）
+       （violation → 重派 code/tests/docs / arch_error 先归因再路由 / 解冻回形成 Loop → 重冻后按序重验架构）
 ```
 
 | 命令 | 关键动作 | 检查点 |
@@ -234,7 +236,7 @@ python scripts/sddl_status.py .
 
 ## 体验规范（重要）
 
-1. **分阶段命令**：绝不在一个回复里跑完整个双 Loop——每个命令是独立交互单元，之间有检查点
+1. **分阶段命令**：绝不在一个回复里跑完整个三 Loop——每个命令是独立交互单元，之间有检查点
 2. **决策点用 clarify，自定义输入显式可见**：每个决策点一个 clarify，附影响说明；**choices 业务选项 ≤3 个，第 4 位固定放"自定义输入（Other）"**（实测 clarify 无自动 Other、choices 上限 4，必须显式占位）；question 文本提示"其他值请选自定义输入"；用户自定义值走捕获协议（记录 value+reason → 同步 spec → 确认记录标 modified）；开放式决策点直接用无 choices 的 clarify
 3. **进度可见**：每个命令开始/结束时报告当前阶段 + 下一步
 4. **状态写入**：每个命令结束写 state.yaml + git commit
@@ -246,7 +248,7 @@ python scripts/sddl_status.py .
 2. **决策点静默决定**——模糊处不标记 DP 直接写默认值 = 用户意图失真。任何"替用户选择"必须登记 DP。
 3. **检查器自证循环**——信任 AI 贴的标签。C1-def 必须做结构反推（解析测试 AST），不信任标签。
 4. **语义检查绝对分数**——LLM 打 0-100 分不可信。用 Checklist 二分 + 投票共识率（客观计票）。
-5. **回写绕过质量门禁**——spec_error 直接改 spec = 自我放松标准。必须解冻 → 回形成 Loop → 重新冻结。
+5. **回写绕过质量门禁**——spec_error 直接改 spec = 自我放松标准。必须解冻 → 回形成 Loop → 重新冻结 → **按序重验架构** → 回派生。
 6. **状态文件膨胀**——把所有进度写进 state.yaml = 又回到"文档谎言"。state.yaml 只存指针，详情在文件本身。
 7. **预算无记录**——不更新 state.yaml 预算 = 成本失控。每命令结束更新。
 8. **语义检查用粗糙字符串匹配**——T1 实测：关键词匹配把 C1-sem 打到 0.48（假阴性爆炸）。优先用 Checklist LLM 投票；启发式仅作 fallback，且必须语义化（AST 提取断言 + 结构化关键词），首轮结果不可信，需人工复核。

@@ -3,7 +3,7 @@
 # 位置：sddl/architecture.yaml（单文件，与 spec.yaml 同构）
 # 生成：/sddl:arch 命令（读取已冻结的 specs/<domain>/spec.yaml 划分模块）
 # 门禁：check_arch.py 静态检查（C-arch-def1/2/3）+ LLM 内聚复审（C-arch-sem）
-# 冻结：spec_status: frozen 后才可进入派生 Loop（双冻结门禁的第二个）
+# 冻结：arch_status: frozen 后才可进入派生 Loop（双冻结门禁的第二个；第一个是 spec_status: frozen）
 
 meta:
   id: "sample-system"            # 必填：系统唯一标识
@@ -53,7 +53,7 @@ data_flows:                      # 建议：跨模块数据流（供 C-arch-sem 
     note: "支付前校验 token"
 
 decision_points:                 # 必填：架构决策点（模板/框架/存储选型等均须登记）
-  - id: "DP-001"
+  - id: "DP-101"                 # 编号接续该项目 spec 的决策点池（共用编号池，不重置；spec 级示例见 spec-schema.md 的 DP-001）
     topic: "web 框架选型"
     default: "fastapi"
     alternatives: ["flask", "fastapi", "django"]

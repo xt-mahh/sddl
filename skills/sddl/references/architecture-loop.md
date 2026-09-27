@@ -12,7 +12,7 @@ interview→spec→confirm→freeze ──▶ arch→confirm→freeze ──▶ 
 
 **双冻结门禁**：`specs/<domain>/spec.yaml` 全部 frozen **且** `sddl/architecture.yaml` frozen，才可进入派生。缺一即回到对应 Loop。
 
-**DP-001（已确认）**：架构以冻结的功能 spec 为输入——架构尊重功能边界，不反过来切分需求。架构阶段发现 domain 切分不合理 → 走 `spec_error` 路由解冻上游 domain，修订重冻后再回来。
+**框架决策（已确认）**：架构以冻结的功能 spec 为输入——架构尊重功能边界，不反过来切分需求。架构阶段发现 domain 切分不合理 → 走 `spec_error` 路由解冻上游 domain，修订重冻后再回来。
 
 ## 阶段 1：生成（/sddl:arch）
 
@@ -85,7 +85,7 @@ current_phase: derivation    # 双冻结齐备后推进
 ## 常见坑（v2.0 新增）
 
 1. **跳过架构 Loop 直接派生**——单模块小项目也必须生成 `single_module: true` 并冻结，否则双冻结门禁永不满足。
-2. **architecture.yaml 先于 spec 冻结**——违反 DP-001 确认的顺序，架构没有功能佐证会拍脑袋；check_arch 不拦（时序是流程纪律），/sddl:arch 的输入检查拦。
+2. **architecture.yaml 先于 spec 冻结**——违反"架构以冻结 spec 为输入"的确认顺序，架构没有功能佐证会拍脑袋；check_arch 不拦（时序是流程纪律），/sddl:arch 的输入检查拦。
 3. **模块划分静默决定**——划分方案本身是最高影响的决策点，不登记 DP 直接冻结 = 架构失真。
 4. **架构修订顺手改 spec**——arch_error 的正确路径是**先归因**：默认怀疑根因在 spec（domain 划分/接口契约），是则显式走 spec_error 上溯 + 顺序传播；确认非 spec 引起才独立解冻 architecture.yaml。既不许顺手改，也不许默认避开 spec——避开 = 掩盖上游缺陷。
 5. **responsibilities 写成技术名词堆**——它是 C-arch-sem 的唯一审点，要写"这个模块对外承担什么职责"（业务语言），不是"用了什么库"。

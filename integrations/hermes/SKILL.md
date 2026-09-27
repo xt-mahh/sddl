@@ -1,7 +1,7 @@
 ---
 name: sddl
-description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:archive。"
-version: 2.1.1
+description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:bugfix /sddl:archive。"
+version: 2.2.1
 author: 小智
 license: MIT
 metadata:
@@ -56,6 +56,8 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 | `/sddl:bugfix` | 修复 | 轻量缺陷通道：diagnose→fix→verify，三态结论 | `sddl/bugs/<slug>/report.md` |
 | `/sddl:archive` | 归档 | 变更归档、spec 合并 | `specs/` 更新 + CHANGELOG |
 
+> **命令落地**：这些是真实存在的命令文件（仓库 `commands/sddl/*.md`，ZCode/Claude 约定：嵌套目录名拼成 `/sddl:<phase>`，每个命令会自动挂载本 skill）。以 plugin 方式安装时自动注册；仅手动复制 skill 目录时，需把 `commands/sddl/` 一并拷到 `~/.zcode/commands/sddl/`（或项目 `.zcode/commands/sddl/`）命令才可用——此时用户说"interview 阶段"等自然语言同样能触发对应阶段。
+
 ## 核心原则
 
 1. **Spec 是神谕，但可被质疑**：派生中发现的 spec 缺陷 → 解冻 → 回形成 Loop 修订 → 重新冻结 → **按序重验架构** → 回派生（走完整质量门禁，不绕过）
@@ -75,7 +77,7 @@ arch_status: frozen          # 架构 Loop 完成（新增）
 current_phase: derivation    # 双冻结齐备后推进
 ```
 
-- 功能 spec 先冻结（DP-001 确认：架构基于冻结的功能边界划分，不反向切分需求）
+- 功能 spec 先冻结（框架决策：架构基于冻结的功能边界划分，不反向切分需求）
 - 小项目豁免：`single_module: true` 的空 modules 架构也必须生成并冻结——豁免的是划分，不是门禁
 - 架构修订走 arch_error 路由，**先归因**：根因在 spec → 走 spec_error 上溯并顺序传播；非 spec 引起 → 独立解冻 architecture.yaml → 修订 → 重冻
 - **顺序传播铁律**：spec 修订重冻后必须按序重验架构（check_arch + 受影响决策点 + 重冻 architecture.yaml）再回派生，不允许跳过架构直接验 derive
@@ -88,6 +90,7 @@ current_phase: derivation    # 双冻结齐备后推进
 <project>/
 ├── sddl/
 │   ├── constitution.md           # v2.0（可选）：项目宪法——不可变原则，高于 spec/架构
+│   ├── requirements.md           # 访谈产出（存在 = interview 完成；sddl_status 据此显示"需求"进度）
 │   ├── specs/                    # 存在 = 访谈完成，spec 已生成
 │   │   └── <domain>/spec.yaml    # status: frozen = 冻结完成
 │   ├── architecture.yaml         # v2.0：存在 = 架构 Loop 已开始；frozen = 完成
@@ -189,6 +192,7 @@ python scripts/sddl_status.py .
 
 - 退出码：0 = pass/converged，1 = fail（可挂 CI）
 - `--json` 输出机器可读证据（供 LLM 审核引用）
+- **跨平台**：Windows 用 `python`（`python3` 常为 Microsoft Store 占位符，**静默失败**）；Linux/macOS 无 `python` 命令时用 `python3`。脚本路径相对本 skill 基目录解析。
 
 **分工原则（重要）**：
 
@@ -232,7 +236,7 @@ python scripts/sddl_status.py .
 
 ## 体验规范（重要）
 
-1. **分阶段命令**：绝不在一个回复里跑完整个双 Loop——每个命令是独立交互单元，之间有检查点
+1. **分阶段命令**：绝不在一个回复里跑完整个三 Loop——每个命令是独立交互单元，之间有检查点
 2. **决策点用 clarify，自定义输入显式可见**：每个决策点一个 clarify，附影响说明；**choices 业务选项 ≤3 个，第 4 位固定放"自定义输入（Other）"**（实测 clarify 无自动 Other、choices 上限 4，必须显式占位）；question 文本提示"其他值请选自定义输入"；用户自定义值走捕获协议（记录 value+reason → 同步 spec → 确认记录标 modified）；开放式决策点直接用无 choices 的 clarify
 3. **进度可见**：每个命令开始/结束时报告当前阶段 + 下一步
 4. **状态写入**：每个命令结束写 state.yaml + git commit

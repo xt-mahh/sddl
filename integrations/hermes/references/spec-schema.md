@@ -123,4 +123,4 @@ behaviors:
 
 ## 完整示例（auth 服务）
 
-见附录 B（v1.1 方案的 auth 示例）——生成 spec 时以此为质量参照：接口有签名有错误、模型有 schema、行为有 GWT 且 THEN 可断言、边界有优先级、质量约束标注 verification。
+历史示例（v1.1 旧版字段名，以本文件 schema 为准）：`docs/archive/SDDL-方案-v1.1.md` 附录 B——生成 spec 时以此为质量参照：接口有签名有错误、模型有 schema、行为有 GWT 且 THEN 可断言、边界有优先级、质量约束标注 verification。完整现行 schema 实例见仓库 [`examples/accounting/`](../../../examples/accounting/)。

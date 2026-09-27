@@ -175,7 +175,7 @@ confirmation_record:
 ## 阶段 4：冻结（/sddl:freeze）
 
 ### 目标
-SQC 全检 + 确认记录签署 → spec 冻结 → 派生 Loop 开始。
+SQC 全检 + 确认记录签署 → spec 冻结 → 架构 Loop 开始（/sddl:arch）。
 
 ### 冻结条件（全部满足）
 1. SQC 无 blocker 级 violation（SQC-def 全过 + SQC-sem 无 blocker）
@@ -187,11 +187,11 @@ SQC 全检 + 确认记录签署 → spec 冻结 → 派生 Loop 开始。
 1. 跑 SQC 全检（见 `references/sqc-checklist.md`）→ 写 `checks/sqc-<domain>-v1.json`
 2. 检查决策点状态
 3. 更新 `specs/<domain>/spec.yaml` 的 `meta.status: frozen`
-4. 更新 `state.yaml`：`spec_status: frozen`、`current_phase: derivation`
+4. 更新 `state.yaml`：`spec_status: frozen`、`current_phase: architecture`
 5. git commit：`feat(sddl): freeze <domain> spec vX.Y.Z`
 
 ### 冻结后
-- spec 成为派生 Loop 的唯一输入
+- spec 成为架构 Loop 的唯一输入（架构基于冻结的功能边界划分，不反向切分需求；架构冻结后双冻结齐备才进入派生）
 - 变更走 changes/ 提案制（见下文"变更管理"）
 - **冻结即锁定**：派生 Loop 期间 spec 不可静默修改
 

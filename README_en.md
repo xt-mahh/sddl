@@ -295,7 +295,7 @@ SDDL's design is validated by literature (arXiv papers) and three rounds of revi
 - **LLMorpheus** (arXiv 2404.09954) — LLM mutation testing → acceptance reverse verification
 - **OpenSpec** (Fission-AI) — specs/+changes/+archive change management practice
 
-Full evidence chain in [`skills/sddl/docs/SDDL-方案-v1.1.md`](skills/sddl/docs/SDDL-方案-v1.1.md) Appendix A (Chinese).
+Full evidence chain in [`skills/sddl/docs/archive/SDDL-方案-v1.1.md`](skills/sddl/docs/archive/SDDL-方案-v1.1.md) Appendix A (Chinese; archived historical design doc — current spec is SKILL.md + references/).
 
 ## Migrating from v1.x
 

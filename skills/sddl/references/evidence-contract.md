@@ -40,8 +40,8 @@
 
 **为什么禁止每次重构**：C1-def 打破自证循环的根基是"def 层证据确定性可复现"。
 若收集器每次现场重写，agent 可（有意或无意）写出漏抓 import 的正则 → "证据"显示
-无越界 → def2 假 pass——自证循环从 spec 层转移到收集器层（pitfall #12 变体：
-checker 单测绿 ≠ 检查器可靠，何况每次都是新 checker）。
+无越界 → def2 假 pass——自证循环从 spec 层转移到收集器层（SKILL.md Common Pitfalls
+#3「检查器自证循环」的变体：checker 单测绿 ≠ 检查器可靠，何况每次都是新 checker）。
 
 ## 显式降级原则（收集器通用纪律）
 

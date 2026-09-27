@@ -59,10 +59,10 @@ src/  tests/  docs/
 ## 阶段 2：验证（/sddl:verify）
 
 ### 目标
-C1-C4 分层检查 + 收敛判定。
+C1-C4 + C-arch 分层检查 + 收敛判定。
 
 ### 执行顺序
-1. 硬条件：C1-def → C2-def → C3 → C4b-def（任一失败 → 停止，先修硬伤）
+1. 硬条件：C1-def → C2-def → C-arch-def → C3 → C4b-def（五项任一失败 → 停止，先修硬伤；C-arch 位于 C2-def 之后、软条件之前，见 checker-matrix.md）
 2. 软条件：C1-sem / C2-sem / C4a / C4b-sem（Checklist 投票）
 3. 收敛判定（见 checker-matrix.md §收敛判定）
 4. 写 `checks/c1-c4-<domain>-v1.json` + Convergence Report

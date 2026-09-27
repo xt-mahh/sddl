@@ -291,7 +291,7 @@ SDDL 的设计经过文献验证（arXiv 论文）与三轮评审循环打磨：
 - **LLMorpheus** (arXiv 2404.09954) — LLM 变异测试 → 验收反推验证
 - **OpenSpec** (Fission-AI) — specs/+changes/+archive 变更管理实践
 
-完整证据链见 [`skills/sddl/docs/SDDL-方案-v1.1.md`](skills/sddl/docs/SDDL-方案-v1.1.md) 附录 A。
+完整证据链见 [`skills/sddl/docs/archive/SDDL-方案-v1.1.md`](skills/sddl/docs/archive/SDDL-方案-v1.1.md) 附录 A（历史文档，已归档；现行规范以 SKILL.md + references/ 为准）。
 
 ## v1.x 迁移
 
