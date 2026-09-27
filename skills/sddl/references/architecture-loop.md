@@ -39,7 +39,7 @@ interview→spec→confirm→freeze ──▶ arch→confirm→freeze ──▶ 
 
 ### 检查点
 
-- [ ] `python3 scripts/check_arch.py <root>` 通过（C-arch-struct + C-arch-def1）
+- [ ] `python scripts/check_arch.py <root>` 通过（C-arch-struct + C-arch-def1）
 - [ ] 全部决策点已登记（选型/划分/豁免）
 
 ## 阶段 2：确认（复用 /sddl:confirm）

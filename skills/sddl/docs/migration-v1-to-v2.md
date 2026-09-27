@@ -26,7 +26,7 @@
 1. 补 `sddl/architecture.yaml`：
    - 多模块：按 `templates/architecture-template.yaml` 填写——从现有 `src/` 目录反向提取模块（name/path/depends_on），domain→模块的 owns 映射照 `sddl/specs/` 填
    - 单模块：只写 `single_module: true` + meta，modules 留空数组
-2. 跑 `python3 scripts/check_arch.py <root> --with-imports`，按报告修 depends_on 与目录声明，直到 pass（存量代码的越界 import 会暴露历史债，逐条补声明或重构，不隐藏）
+2. 跑 `python scripts/check_arch.py <root> --with-imports`，按报告修 depends_on 与目录声明，直到 pass（存量代码的越界 import 会暴露历史债，逐条补声明或重构，不隐藏）
 3. 架构决策点（模块划分/技术栈）补登记 + confirm（存量项目可按"现状即决策"批量确认）
 4. state.yaml 补两行：`arch_status: frozen`、`current_phase` 按实际改
 5. commit：`chore(sddl): migrate to v2.0 architecture layer`
@@ -43,10 +43,10 @@
 
 ```bash
 # 新增（v2.0）
-python3 scripts/check_arch.py <root> [--with-imports] --json
+python scripts/check_arch.py <root> [--with-imports] --json
 
 # sddl_status.py 输出新增阶段：arch / arch_freeze
-python3 scripts/sddl_status.py <root>
+python scripts/sddl_status.py <root>
 ```
 
 check_sqc.py / check_c1_c4.py 不变（功能 spec 的门禁与 v1.x 完全兼容）。

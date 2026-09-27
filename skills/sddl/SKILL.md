@@ -1,7 +1,7 @@
 ---
 name: sddl
-description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:archive。"
-version: 2.1.0
+description: "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成 Loop 需求→冻结 Spec；架构 Loop spec→冻结 architecture；派生 Loop 双冻结→tests/code/docs）驱动开发。Use when 用户要开始新项目开发、用 AI 写代码、规划系统设计、做需求分析、写测试、写文档、或任何需要\"先定义清楚再动手\"的开发任务。分阶段命令：/sddl:init /sddl:interview /sddl:spec /sddl:confirm /sddl:freeze /sddl:arch /sddl:derive /sddl:verify /sddl:bugfix /sddl:archive。"
+version: 2.2.0
 author: 小智
 license: MIT
 metadata:
@@ -55,6 +55,8 @@ SDDL 把 AI 编程从"对话驱动"升级为"规格驱动"。核心承诺：**�
 | `/sddl:verify` | 派生 | C1-C4 + C-arch 检查 + 收敛判定 | `checks/*.json` + 收敛/路由 |
 | `/sddl:bugfix` | 修复 | 轻量缺陷通道：diagnose→fix→verify，三态结论 | `sddl/bugs/<slug>/report.md` |
 | `/sddl:archive` | 归档 | 变更归档、spec 合并 | `specs/` 更新 + CHANGELOG |
+
+> **命令落地**：这些是真实存在的命令文件（仓库 `commands/sddl/*.md`，ZCode/Claude 约定：嵌套目录名拼成 `/sddl:<phase>`，每个命令会自动挂载本 skill）。以 plugin 方式安装时自动注册；仅手动复制 skill 目录时，需把 `commands/sddl/` 一并拷到 `~/.zcode/commands/sddl/`（或项目 `.zcode/commands/sddl/`）命令才可用——此时用户说"interview 阶段"等自然语言同样能触发对应阶段。
 
 ## 核心原则
 
@@ -173,21 +175,22 @@ last_check: { type: arch, id: sys-v1.0.0, result: pass, at: 2026-09-20T10:00 }
 
 ```bash
 # SQC 确定性检查（形成 Loop 门禁）—— 脚本给出事实
-python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+python scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
 # C-arch 确定性检查（架构 Loop 门禁 + 派生 C-arch 维度）—— v2.0
-python3 scripts/check_arch.py . --verbose                # 冻结前（struct + def1）
-python3 scripts/check_arch.py . --with-imports --verbose # 派生后（+ def2 import 图 / def3 目录）
+python scripts/check_arch.py . --verbose                # 冻结前（struct + def1）
+python scripts/check_arch.py . --with-imports --verbose # 派生后（+ def2 import 图 / def3 目录）
 
 # C1-C4 确定性检查（派生 Loop 门禁）—— 脚本给出事实
-python3 scripts/check_c1_c4.py . --verbose
+python scripts/check_c1_c4.py . --verbose
 
 # 状态恢复（中断后）—— 扫目录输出当前进度 + 下一步命令
-python3 scripts/sddl_status.py .
+python scripts/sddl_status.py .
 ```
 
 - 退出码：0 = pass/converged，1 = fail（可挂 CI）
 - `--json` 输出机器可读证据（供 LLM 审核引用）
+- **跨平台**：Windows 用 `python`（`python3` 常为 Microsoft Store 占位符，**静默失败**）；Linux/macOS 无 `python` 命令时用 `python3`。脚本路径相对本 skill 基目录解析。
 
 **分工原则（重要）**：
 

@@ -1,0 +1,9 @@
+{
+  "name": "sddl",
+  "version": "2.2.0",
+  "description": "Spec-Driven Development Loop：以结构化 Spec + 架构为单一事实来源，三 Loop（形成/架构/派生）驱动开发，提供 /sddl:* 分阶段命令与确定性检查器。",
+  "author": { "name": "xt-mahh" },
+  "license": "MIT",
+  "skills": "skills",
+  "commands": "commands"
+}

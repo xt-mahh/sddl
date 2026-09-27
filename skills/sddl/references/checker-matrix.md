@@ -28,7 +28,7 @@
 | C-arch-def1/2/3 | 硬 | 模块↔domain 所有权覆盖 / import 图 = 声明依赖 / 模块落目录（check_arch.py；非 Python 技术栈显式降级 → 项目收集器接管，见 evidence-contract.md） |
 | C-arch-sem | 软 | 职责内聚性：模块职责与 owns 的行为分布一致（Checklist，v2.0 新增） |
 
-> v2.0：C-arch 检查 `artifacts + architecture.yaml`，位于 C2-def 之后、软条件之前执行。检查器：`python3 scripts/check_arch.py <root> --with-imports --json`。
+> v2.0：C-arch 检查 `artifacts + architecture.yaml`，位于 C2-def 之后、软条件之前执行。检查器：`python scripts/check_arch.py <root> --with-imports --json`。
 
 ## 硬条件检查（确定性，逐项执行）
 

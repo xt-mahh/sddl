@@ -98,15 +98,28 @@ The problem with conversational programming: **context windows are finite, and t
 
 ## Quick Start (Agent Integration)
 
-### Option A: Install as an Agent Skill (Recommended)
+### Option A: Install as a ZCode Plugin (Recommended)
 
-The core deliverable is an **Agent Skill** (in [`integrations/`](integrations/)). Once installed, the agent gains 9 staged commands:
+This repository is itself a **ZCode plugin** (`.zcode-plugin/plugin.json`). Installing it registers the sddl skill + **10 real staged commands** (`commands/sddl/*.md` → `/sddl:init` etc.) automatically:
 
 ```bash
+# ZCode client: Settings → Plugin Management → Discover → "+" to add a marketplace
+#   choose GitHub repository as the source, enter this repo's URL, then install the sddl plugin
+```
+
+### Option B: Manual Skill + Commands Install (any skill/command-capable agent)
+
+```bash
+# 1. The skill itself (methodology + checkers + templates)
+cp -r skills/sddl ~/.zcode/skills/sddl        # or ~/.agents/skills/ (cross-tool)
+#   Project-scoped: <repo>/.zcode/skills/sddl (this repo only, shareable via VCS)
+
+# 2. Staged commands (without this copy /sddl:* won't exist; natural language
+#    like "start the interview phase" still triggers the skill)
+cp -r commands/sddl ~/.zcode/commands/sddl    # or ~/.agents/commands/sddl
+
 # Hermes:
 cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
-
-# Other agents (Claude Code / OpenCode / OpenClaw): see "Multi-Platform Support" below
 ```
 
 Trigger in conversation (auto-loaded, or explicit commands):
@@ -122,36 +135,39 @@ Trigger in conversation (auto-loaded, or explicit commands):
 /sddl:freeze      # C-arch check + freeze architecture
 /sddl:derive      # Derive tests/code/docs from the spec + architecture
 /sddl:verify      # C1-C4 + C-arch consistency checks + convergence verdict
+/sddl:bugfix      # Lightweight defect lane (v2.0)
 /sddl:archive     # Archive changes
 ```
 
 **Full workflow**: `/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:arch → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
 
-### Option B: Use Checker Scripts Only (No Agent Environment)
+### Option C: Use Checker Scripts Only (No Agent Environment)
 
-If you're not using Hermes, the checker scripts run standalone (as CI gates or manual checks):
+The checker scripts run standalone (as CI gates or manual checks):
 
 ```bash
 pip install pyyaml
 
 # SQC check (before spec freeze)
-python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+python skills/sddl/scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
 # C-arch architecture check (before architecture freeze / at verify time)
-python3 scripts/check_arch.py . --verbose                # pre-freeze
-python3 scripts/check_arch.py . --with-imports --verbose # post-derivation (import graph + directory checks)
+python skills/sddl/scripts/check_arch.py . --verbose                # pre-freeze
+python skills/sddl/scripts/check_arch.py . --with-imports --verbose # post-derivation (import graph + directory checks)
 
 # C1-C4 consistency check (at verify time)
-python3 scripts/check_c1_c4.py . --verbose
+python skills/sddl/scripts/check_c1_c4.py . --verbose
 
 # State recovery (after interruption)
-python3 scripts/sddl_status.py .
+python skills/sddl/scripts/sddl_status.py .
 ```
+
+> Cross-platform: use `python` on Windows (`python3` is often a Microsoft Store stub that **fails silently**); use `python3` on Linux/macOS when no `python` exists.
 
 Example output:
 
 ```bash
-$ python3 scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
+$ python skills/sddl/scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
 SQC [0.1.1]: ✅ PASS
   ✅ def-schema
   ✅ def-refs
@@ -161,7 +177,7 @@ SQC [0.1.1]: ✅ PASS
   ✅ sem-contradiction
   ✅ sem-testability
 
-$ python3 scripts/check_c1_c4.py . --verbose
+$ python skills/sddl/scripts/check_c1_c4.py . --verbose
 C1-C4 [accounting v0.1.1]: ✅ CONVERGED
   ✅ c1_def
   ✅ c2_def
@@ -174,57 +190,64 @@ A complete example is in [`examples/accounting/`](examples/accounting/) — a fu
 
 ## Skill Structure
 
-The Skill version lives in [`integrations/`](integrations/):
+The skill lives in [`skills/sddl/`](skills/sddl/); plugin-registered commands live in [`commands/sddl/`](commands/sddl/):
 
 ```
-integrations/
-├── hermes/                      Hermes Agent Skill (complete)
-│   ├── SKILL.md                 Main entry + 9 staged commands
-│   ├── references/ (7)          Progressive-disclosure guides (loaded on demand, not all at once)
-│   ├── scripts/ (4)             Checkers (identical to root scripts/)
-│   └── templates/ (3)           Spec/architecture skeletons + decision summary
-├── claude-code/                 (planned)
-└── opencode/                    (planned)
+skills/sddl/
+├── SKILL.md                     Main entry (triggers + three-loop orchestration + recovery rules)
+├── references/ (10)             Progressive-disclosure guides (loaded on demand, not all at once)
+├── scripts/ (5)                 Checkers (incl. scenario self-test test_check_arch.py)
+├── templates/ (4)               Spec/architecture/constitution skeletons + decision summary
+└── docs/                        Methodology docs + v1→v2 migration guide
+
+commands/sddl/                   10 staged commands (init/interview/spec/confirm/
+                                 freeze/arch/derive/verify/bugfix/archive)
 ```
 
-**Why a skill rather than a plain tool**: SDDL's 9 commands are **conversational interaction flows** (interview, confirmation, check reports) — not something a pure CLI can express. The skill lets the agent execute this workflow directly, with humans stepping in only at key checkpoints (decision-point confirmation, freeze approval).
+**Why a skill rather than a plain tool**: SDDL's 10 commands are **conversational interaction flows** (interview, confirmation, check reports) — not something a pure CLI can express. The skill lets the agent execute this workflow directly, with humans stepping in only at key checkpoints (decision-point confirmation, freeze approval).
 
 ## Multi-Platform Support
 
-SDDL's **methodology core is platform-agnostic** — `references/` (methodology guides), `scripts/` (checkers), and `templates/` (templates) don't depend on any specific agent:
+SDDL's **methodology core is platform-agnostic** — `skills/sddl/references/` (methodology guides), `skills/sddl/scripts/` (checkers), and `skills/sddl/templates/` (templates) don't depend on any specific agent:
 
 | Component | Platform-Dependent | Description |
 |-----------|-------------------|-------------|
-| `references/` methodology guides | ❌ No | Pure Markdown, readable by any agent |
-| `scripts/` checkers | ❌ No | Pure Python CLI, runs in any environment |
-| `templates/` templates | ❌ No | Pure YAML/Markdown |
+| `skills/sddl/references/` guides | ❌ No | Pure Markdown, readable by any agent |
+| `skills/sddl/scripts/` checkers | ❌ No | Pure Python CLI, runs in any environment |
+| `skills/sddl/templates/` templates | ❌ No | Pure YAML/Markdown |
+| This repo (plugin layout) | ✅ ZCode | skill + `/sddl:*` commands installed in one step |
 | `integrations/hermes/` | ✅ Hermes | Leverages Hermes' skill/slash-command/clarify mechanisms |
 | `integrations/claude-code/` | ✅ Claude Code | Planned (CLAUDE.md + slash commands) |
 | `integrations/opencode/` | ✅ OpenCode | Planned (AGENTS.md) |
 
-**Integration principle**: write the methodology core + checkers once; each platform only needs a thin "shell" (mapping the 9 commands to that platform's interaction mechanisms). If your agent isn't listed yet, copy the workflow from `integrations/hermes/SKILL.md` into your agent's rules file (e.g., `CLAUDE.md` / `AGENTS.md`) — the checker scripts are directly reusable.
+**Integration principle**: write the methodology core + checkers once; each platform only needs a thin "shell" (mapping the 10 commands to that platform's interaction mechanisms). If your agent isn't listed yet, copy the workflow from `skills/sddl/SKILL.md` into your agent's rules file (e.g., `CLAUDE.md` / `AGENTS.md`) — the checker scripts are directly reusable.
 
 ## Project Structure
 
 ```
 sddl/
-├── scripts/                     Checker scripts (directly runnable)
-│   ├── check_sqc.py             SQC check (Formation Loop gate)
-│   ├── check_arch.py            C-arch architecture check (Architecture Loop gate, v2.0)
-│   ├── check_c1_c4.py           C1-C4 consistency check (Derivation Loop gate)
-│   └── sddl_status.py           State recovery (directory-as-state)
-├── references/                  Methodology guides (progressive disclosure)
-│   ├── formation-loop.md        Formation Loop detailed workflow
-│   ├── architecture-loop.md     Architecture Loop detailed workflow (v2.0)
-│   ├── derivation-loop.md       Derivation Loop detailed workflow
-│   ├── spec-schema.md           Spec 5-layer structure
-│   ├── sqc-checklist.md         SQC check checklist
-│   └── checker-matrix.md        C1-C4 + C-arch check matrix
-├── templates/                   Spec/architecture skeletons + decision summary templates
-├── examples/                    Complete example projects
-│   └── accounting/              Bookkeeping/reconciliation service (zero to converged)
-├── integrations/                Per-platform agent adapters (Hermes done; Claude Code/OpenCode planned)
-├── docs/                        Methodology docs + v1→v2 migration guide
+├── .zcode-plugin/plugin.json     Plugin manifest (installs skill + commands together)
+├── skills/sddl/                  The Agent Skill itself
+│   ├── SKILL.md                  Main entry (triggers + three-loop orchestration + recovery rules)
+│   ├── scripts/                  Checker scripts (directly runnable)
+│   │   ├── check_sqc.py          SQC check (Formation Loop gate)
+│   │   ├── check_arch.py         C-arch architecture check (Architecture Loop gate, v2.0)
+│   │   ├── check_c1_c4.py        C1-C4 consistency check (Derivation Loop gate)
+│   │   ├── sddl_status.py        State recovery (directory-as-state)
+│   │   └── test_check_arch.py    Checker scenario self-test (T1-T11)
+│   ├── references/               Methodology guides (progressive disclosure)
+│   │   ├── formation-loop.md     Formation Loop detailed workflow
+│   │   ├── architecture-loop.md  Architecture Loop detailed workflow (v2.0)
+│   │   ├── derivation-loop.md    Derivation Loop detailed workflow
+│   │   ├── spec-schema.md        Spec 5-layer structure
+│   │   ├── sqc-checklist.md      SQC check checklist
+│   │   └── checker-matrix.md     C1-C4 + C-arch check matrix
+│   └── templates/                Spec/architecture skeletons + decision summary templates
+├── commands/sddl/                10 staged commands (/sddl:init … /sddl:archive)
+├── examples/                     Complete example projects
+│   └── accounting/               Bookkeeping/reconciliation service (zero to converged)
+├── integrations/                 Per-platform agent adapters (Hermes done; Claude Code/OpenCode planned)
+├── skills/sddl/docs/             Methodology docs + v1→v2 migration guide
 └── LICENSE
 ```
 
@@ -272,7 +295,7 @@ SDDL's design is validated by literature (arXiv papers) and three rounds of revi
 - **LLMorpheus** (arXiv 2404.09954) — LLM mutation testing → acceptance reverse verification
 - **OpenSpec** (Fission-AI) — specs/+changes/+archive change management practice
 
-Full evidence chain in [`docs/SDDL-方案-v1.1.md`](docs/SDDL-方案-v1.1.md) Appendix A (Chinese).
+Full evidence chain in [`skills/sddl/docs/SDDL-方案-v1.1.md`](skills/sddl/docs/SDDL-方案-v1.1.md) Appendix A (Chinese).
 
 ## Migrating from v1.x
 
@@ -282,7 +305,7 @@ v2.0 adds the Architecture Loop (dual-loop → triple-loop). v1.x projects migra
 - **Still iterating**: add `sddl/architecture.yaml` (module layout can be reverse-extracted from existing `src/`) → fix issues until `check_arch.py --with-imports` passes → confirm architecture decision points → add `arch_status: frozen` to state.yaml
 - **Single-module small projects**: a `single_module: true` empty architecture must still be generated and frozen (partition is waived, the gate is not)
 
-See [`docs/migration-v1-to-v2.md`](docs/migration-v1-to-v2.md) (Chinese).
+See [`skills/sddl/docs/migration-v1-to-v2.md`](skills/sddl/docs/migration-v1-to-v2.md) (Chinese).
 
 ## When to Use
 
@@ -302,4 +325,4 @@ MIT License — see [LICENSE](LICENSE)
 ## Acknowledgements
 
 - Methodology refined through 3 review loops (35 issues closed) + 2 rounds of literature validation (17 arXiv papers + OpenSpec practice)
-- The Hermes Agent Skill version validated through 8 staged commands + 7 test scenarios
+- The Hermes Agent Skill version validated through 10 staged commands + scenario self-tests
