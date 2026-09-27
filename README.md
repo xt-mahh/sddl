@@ -112,8 +112,8 @@ cp -r skills/sddl ~/.zcode/skills/sddl        # 或 ~/.agents/skills/（跨工�
 # 2. 分阶段命令（不复制则 /sddl:* 不可用，但自然语言"进入 interview 阶段"仍可触发）
 cp -r commands/sddl ~/.zcode/commands/sddl    # 或 ~/.agents/commands/sddl
 
-# Hermes:
-cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
+# Hermes（单一来源 skills/sddl/，无需适配层；见 integrations/hermes/README.md）：
+cp -r skills/sddl ~/.hermes/skills/software-development/sddl
 ```
 
 安装后在对话中即可使用分阶段命令：
@@ -210,7 +210,7 @@ SDDL 的**方法论核心是平台无关的**——`skills/sddl/references/`（�
 | `skills/sddl/scripts/` 检查器 | ❌ 无 | 纯 Python CLI，任何环境都能跑 |
 | `skills/sddl/templates/` 模板 | ❌ 无 | 纯 YAML/Markdown |
 | 本仓库（plugin 布局） | ✅ ZCode | skill + `/sddl:*` 命令一键安装 |
-| `integrations/hermes/` | ✅ Hermes | 利用 Hermes 的 skill/斜杠命令/clarify 机制 |
+| `integrations/hermes/` | ✅ Hermes | 仅安装指引——skill 内容平台无关，直接装 `skills/sddl/`（历史完整副本已单一来源化，消除双份漂移） |
 | `integrations/claude-code/` | ✅ Claude Code | 规划中（利用 CLAUDE.md + slash command） |
 | `integrations/opencode/` | ✅ OpenCode | 规划中（利用 AGENTS.md） |
 
@@ -242,7 +242,7 @@ sddl/
 ├── commands/sddl/                10 个分阶段命令（/sddl:init … /sddl:archive）
 ├── examples/                     完整示例项目
 │   └── accounting/               记账/对账服务（从零到收敛）
-├── integrations/                 各平台 Agent 适配器（Hermes 已完成，Claude Code/OpenCode 规划中）
+├── integrations/                 各平台适配说明（hermes/ 仅安装指引，内容单一来源于 skills/sddl/）
 ├── skills/sddl/docs/             方案文档 + v1→v2 迁移指南
 └── LICENSE
 ```
@@ -321,4 +321,4 @@ MIT License — 见 [LICENSE](LICENSE)
 ## 致谢
 
 - 方法论经过 3 轮评审循环（35 个问题关闭）+ 2 轮文献验证（arXiv 17 篇 + OpenSpec 实践）
-- Hermes Agent Skill 化版本经过 8 个分阶段命令 + 7 个测试场景验证
+- Hermes Agent Skill 化版本经过 10 个分阶段命令 + 场景自测（T1-T11）验证

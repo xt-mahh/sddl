@@ -118,8 +118,8 @@ cp -r skills/sddl ~/.zcode/skills/sddl        # or ~/.agents/skills/ (cross-tool
 #    like "start the interview phase" still triggers the skill)
 cp -r commands/sddl ~/.zcode/commands/sddl    # or ~/.agents/commands/sddl
 
-# Hermes:
-cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
+# Hermes (single source skills/sddl/, no adapter needed; see integrations/hermes/README.md):
+cp -r skills/sddl ~/.hermes/skills/software-development/sddl
 ```
 
 Trigger in conversation (auto-loaded, or explicit commands):
@@ -216,7 +216,7 @@ SDDL's **methodology core is platform-agnostic** — `skills/sddl/references/` (
 | `skills/sddl/scripts/` checkers | ❌ No | Pure Python CLI, runs in any environment |
 | `skills/sddl/templates/` templates | ❌ No | Pure YAML/Markdown |
 | This repo (plugin layout) | ✅ ZCode | skill + `/sddl:*` commands installed in one step |
-| `integrations/hermes/` | ✅ Hermes | Leverages Hermes' skill/slash-command/clarify mechanisms |
+| `integrations/hermes/` | ✅ Hermes | Install guide only — the skill is platform-agnostic, install `skills/sddl/` directly (former full copy de-duplicated to a single source) |
 | `integrations/claude-code/` | ✅ Claude Code | Planned (CLAUDE.md + slash commands) |
 | `integrations/opencode/` | ✅ OpenCode | Planned (AGENTS.md) |
 
@@ -246,7 +246,7 @@ sddl/
 ├── commands/sddl/                10 staged commands (/sddl:init … /sddl:archive)
 ├── examples/                     Complete example projects
 │   └── accounting/               Bookkeeping/reconciliation service (zero to converged)
-├── integrations/                 Per-platform agent adapters (Hermes done; Claude Code/OpenCode planned)
+├── integrations/                 Per-platform notes (hermes/ is an install guide; content single-sourced from skills/sddl/)
 ├── skills/sddl/docs/             Methodology docs + v1→v2 migration guide
 └── LICENSE
 ```
