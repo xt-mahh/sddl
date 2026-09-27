@@ -93,18 +93,32 @@ AI 编程时代的四个核心痛点：
 
 ## 快速开始（Agent 集成）
 
-### 方式 A：安装为 Agent Skill（推荐）
+### 方式 A：安装为 ZCode 插件（推荐）
 
-本项目的核心交付是 **Agent Skill**（位于 [`integrations/`](integrations/)），装好后 agent 就有了 8 个分阶段命令：
+本仓库即一个 **ZCode 插件**（`.zcode-plugin/plugin.json`），安装后自动获得 sddl skill + **10 个真实注册的分阶段命令**（`commands/sddl/*.md` → `/sddl:init` 等）：
 
 ```bash
-# 1. 把 skill 装进 agent
-# Hermes:
-cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
+# ZCode 客户端：Settings → Plugin Management → Discover → "+" 添加 marketplace
+#   来源选 GitHub repository，填入本仓库地址，然后安装 sddl 插件
+```
 
-# 其他 agent（Claude Code / OpenCode / OpenClaw）：见下方「多平台支持」
+### 方式 B：手动安装 skill + 命令（任何支持 skill/command 的 agent）
 
-# 2. 在对话中触发（自动加载，或显式命令）
+```bash
+# 1. skill 本体（方法论 + 检查器 + 模板）
+cp -r skills/sddl ~/.zcode/skills/sddl        # 或 ~/.agents/skills/（跨工具通用）
+#   项目级安装：<repo>/.zcode/skills/sddl（仅本项目生效，可随仓库共享）
+
+# 2. 分阶段命令（不复制则 /sddl:* 不可用，但自然语言"进入 interview 阶段"仍可触发）
+cp -r commands/sddl ~/.zcode/commands/sddl    # 或 ~/.agents/commands/sddl
+
+# Hermes（单一来源 skills/sddl/，无需适配层；见 integrations/hermes/README.md）：
+cp -r skills/sddl ~/.hermes/skills/software-development/sddl
+```
+
+安装后在对话中即可使用分阶段命令：
+
+```bash
 /sddl:init        # 初始化项目（建目录结构）
 /sddl:interview   # 分层需求访谈
 /sddl:spec        # 生成 Spec 草稿 + 决策点标记
@@ -115,36 +129,39 @@ cp -r integrations/hermes ~/.hermes/skills/software-development/sddl
 /sddl:freeze      # C-arch 检查 + 冻结架构
 /sddl:derive      # 从 spec+架构派生 tests/code/docs
 /sddl:verify      # C1-C4 + C-arch 一致性检查 + 收敛判定
+/sddl:bugfix      # 轻量缺陷通道（v2.0）
 /sddl:archive     # 变更归档
 ```
 
 **完整工作流**：`/sddl:init → /sddl:interview → /sddl:spec → /sddl:confirm → /sddl:freeze → /sddl:arch → /sddl:confirm → /sddl:freeze → /sddl:derive → /sddl:verify → /sddl:archive`
 
-### 方式 B：只用检查器脚本（无 agent 环境）
+### 方式 C：只用检查器脚本（无 agent 环境）
 
-如果不用 Hermes，检查器脚本也可以独立运行（作为 CI 门禁或手动检查）：
+如果不用 agent，检查器脚本也可以独立运行（作为 CI 门禁或手动检查）：
 
 ```bash
 pip install pyyaml
 
 # SQC 检查（spec 冻结前）
-python3 scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
+python skills/sddl/scripts/check_sqc.py sddl/specs/<domain>/spec.yaml --verbose
 
 # C-arch 架构检查（架构冻结前 / verify 时）
-python3 scripts/check_arch.py . --verbose                # 冻结前
-python3 scripts/check_arch.py . --with-imports --verbose # 派生后（含 import 图/目录检查）
+python skills/sddl/scripts/check_arch.py . --verbose                # 冻结前
+python skills/sddl/scripts/check_arch.py . --with-imports --verbose # 派生后（含 import 图/目录检查）
 
 # C1-C4 一致性检查（verify 时）
-python3 scripts/check_c1_c4.py . --verbose
+python skills/sddl/scripts/check_c1_c4.py . --verbose
 
 # 状态恢复（中断后）
-python3 scripts/sddl_status.py .
+python skills/sddl/scripts/sddl_status.py .
 ```
+
+> 跨平台：Windows 用 `python`（`python3` 常为 Microsoft Store 占位符，会**静默失败**）；Linux/macOS 无 `python` 命令时用 `python3`。
 
 示例输出：
 
 ```bash
-$ python3 scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
+$ python skills/sddl/scripts/check_sqc.py sddl/specs/accounting/spec.yaml --verbose
 SQC [0.1.1]: ✅ PASS
   ✅ def-schema
   ✅ def-refs
@@ -154,7 +171,7 @@ SQC [0.1.1]: ✅ PASS
   ✅ sem-contradiction
   ✅ sem-testability
 
-$ python3 scripts/check_c1_c4.py . --verbose
+$ python skills/sddl/scripts/check_c1_c4.py . --verbose
 C1-C4 [accounting v0.1.1]: ✅ CONVERGED
   ✅ c1_def
   ✅ c2_def
@@ -167,35 +184,37 @@ C1-C4 [accounting v0.1.1]: ✅ CONVERGED
 
 ## Skill 结构
 
-本项目的 Skill 化版本位于 [`integrations/`](integrations/)：
+skill 本体位于 [`skills/sddl/`](skills/sddl/)，插件化命令位于 [`commands/sddl/`](commands/sddl/)：
 
 ```
-integrations/
-├── hermes/                      Hermes Agent Skill（完整版）
-│   ├── SKILL.md                 主入口 + 9 个分阶段命令
-│   ├── references/ (7个)        渐进披露手册（按需加载，不一次全读）
-│   ├── scripts/ (4个)           检查器（与根目录 scripts/ 相同）
-│   └── templates/ (3个)         spec/architecture 骨架 + 决策点摘要
-├── claude-code/                 （规划中）
-└── opencode/                    （规划中）
+skills/sddl/
+├── SKILL.md                     主入口（触发条件 + 三 Loop 编排 + 恢复规则）
+├── references/ (10个)           渐进披露手册（按需加载，不一次全读）
+├── scripts/ (5个)               检查器（含场景自测 test_check_arch.py）
+├── templates/ (4个)             spec/architecture/constitution 骨架 + 决策点摘要
+└── docs/                        方案文档 + v1→v2 迁移指南
+
+commands/sddl/                   10 个分阶段命令（init/interview/spec/confirm/
+                                 freeze/arch/derive/verify/bugfix/archive）
 ```
 
-**为什么是 skill 而非普通工具**：SDDL 的 9 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
+**为什么是 skill 而非普通工具**：SDDL 的 10 个命令是**对话式交互流程**（访谈、确认、检查报告），不是纯 CLI 能表达的。Skill 让 agent 直接执行这套流程，人只需要在关键节点（决策点确认、冻结审批）介入。
 
 ## 多平台支持
 
-SDDL 的**方法论核心是平台无关的**——`references/`（方法论手册）、`scripts/`（检查器）、`templates/`（模板）不依赖任何具体 agent：
+SDDL 的**方法论核心是平台无关的**——`skills/sddl/references/`（方法论手册）、`skills/sddl/scripts/`（检查器）、`skills/sddl/templates/`（模板）不依赖任何具体 agent：
 
 | 组件 | 平台依赖 | 说明 |
 |------|---------|------|
-| `references/` 方法论手册 | ❌ 无 | 纯 Markdown，任何 agent 都能读 |
-| `scripts/` 检查器 | ❌ 无 | 纯 Python CLI，任何环境都能跑 |
-| `templates/` 模板 | ❌ 无 | 纯 YAML/Markdown |
-| `integrations/hermes/` | ✅ Hermes | 利用 Hermes 的 skill/斜杠命令/clarify 机制 |
+| `skills/sddl/references/` 方法论手册 | ❌ 无 | 纯 Markdown，任何 agent 都能读 |
+| `skills/sddl/scripts/` 检查器 | ❌ 无 | 纯 Python CLI，任何环境都能跑 |
+| `skills/sddl/templates/` 模板 | ❌ 无 | 纯 YAML/Markdown |
+| 本仓库（plugin 布局） | ✅ ZCode | skill + `/sddl:*` 命令一键安装 |
+| `integrations/hermes/` | ✅ Hermes | 仅安装指引——skill 内容平台无关，直接装 `skills/sddl/`（历史完整副本已单一来源化，消除双份漂移） |
 | `integrations/claude-code/` | ✅ Claude Code | 规划中（利用 CLAUDE.md + slash command） |
 | `integrations/opencode/` | ✅ OpenCode | 规划中（利用 AGENTS.md） |
 
-**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 9 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `integrations/hermes/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
+**接入原则**：核心方法论 + 检查器一次编写，各平台只需加一层"壳"（把 10 个命令映射到该平台的交互机制）。如果你用的 agent 尚未收录，把 `skills/sddl/SKILL.md` 的流程抄到你的 agent 规则文件（如 `CLAUDE.md` / `AGENTS.md`）即可，检查器脚本直接复用。
 
 ---
 
@@ -203,23 +222,28 @@ SDDL 的**方法论核心是平台无关的**——`references/`（方法论手�
 
 ```
 sddl/
-├── scripts/                     检查器脚本（可直接运行）
-│   ├── check_sqc.py             SQC 检查（形成 Loop 门禁）
-│   ├── check_arch.py            C-arch 架构检查（架构 Loop 门禁，v2.0）
-│   ├── check_c1_c4.py           C1-C4 一致性检查（派生 Loop 门禁）
-│   └── sddl_status.py           状态恢复（目录即状态）
-├── references/                  方法论手册（渐进披露）
-│   ├── formation-loop.md        形成 Loop 详细流程
-│   ├── architecture-loop.md     架构 Loop 详细流程（v2.0）
-│   ├── derivation-loop.md       派生 Loop 详细流程
-│   ├── spec-schema.md           Spec 五层结构
-│   ├── sqc-checklist.md         SQC 检查清单
-│   └── checker-matrix.md        C1-C4 + C-arch 检查矩阵
-├── templates/                   spec/architecture 骨架 + 决策点摘要模板
-├── examples/                    完整示例项目
-│   └── accounting/              记账/对账服务（从零到收敛）
-├── integrations/                各平台 Agent 适配器（Hermes 已完成，Claude Code/OpenCode 规划中）
-├── docs/                        方案文档 + v1→v2 迁移指南
+├── .zcode-plugin/plugin.json     插件清单（skill + commands 一键安装）
+├── skills/sddl/                  Agent Skill 本体
+│   ├── SKILL.md                  主入口（触发 + 三 Loop 编排 + 恢复规则）
+│   ├── scripts/                  检查器（可直接运行）
+│   │   ├── check_sqc.py          SQC 检查（形成 Loop 门禁）
+│   │   ├── check_arch.py         C-arch 架构检查（架构 Loop 门禁，v2.0）
+│   │   ├── check_c1_c4.py        C1-C4 一致性检查（派生 Loop 门禁）
+│   │   ├── sddl_status.py        状态恢复（目录即状态）
+│   │   └── test_check_arch.py    检查器场景自测（T1-T11）
+│   ├── references/               方法论手册（渐进披露）
+│   │   ├── formation-loop.md     形成 Loop 详细流程
+│   │   ├── architecture-loop.md  架构 Loop 详细流程（v2.0）
+│   │   ├── derivation-loop.md    派生 Loop 详细流程
+│   │   ├── spec-schema.md        Spec 五层结构
+│   │   ├── sqc-checklist.md      SQC 检查清单
+│   │   └── checker-matrix.md     C1-C4 + C-arch 检查矩阵
+│   └── templates/                spec/architecture 骨架 + 决策点摘要模板
+├── commands/sddl/                10 个分阶段命令（/sddl:init … /sddl:archive）
+├── examples/                     完整示例项目
+│   └── accounting/               记账/对账服务（从零到收敛）
+├── integrations/                 各平台适配说明（hermes/ 仅安装指引，内容单一来源于 skills/sddl/）
+├── skills/sddl/docs/             方案文档 + v1→v2 迁移指南
 └── LICENSE
 ```
 
@@ -267,7 +291,7 @@ SDDL 的设计经过文献验证（arXiv 论文）与三轮评审循环打磨：
 - **LLMorpheus** (arXiv 2404.09954) — LLM 变异测试 → 验收反推验证
 - **OpenSpec** (Fission-AI) — specs/+changes/+archive 变更管理实践
 
-完整证据链见 [`docs/SDDL-方案-v1.1.md`](docs/SDDL-方案-v1.1.md) 附录 A。
+完整证据链见 [`skills/sddl/docs/archive/SDDL-方案-v1.1.md`](skills/sddl/docs/archive/SDDL-方案-v1.1.md) 附录 A（历史文档，已归档；现行规范以 SKILL.md + references/ 为准）。
 
 ## v1.x 迁移
 
@@ -277,7 +301,7 @@ v2.0 新增架构 Loop（双 Loop → 三 Loop），v1.x 项目手工迁移（�
 - **迭代中**：补 `sddl/architecture.yaml`（可从现有 `src/` 反向提取模块）→ `check_arch.py --with-imports` 修到 pass → 架构决策点补确认 → state.yaml 补 `arch_status: frozen`
 - **单模块小项目**：`single_module: true` 空架构也要生成并冻结（豁免划分，不豁免门禁）
 
-详见 [`docs/migration-v1-to-v2.md`](docs/migration-v1-to-v2.md)。
+详见 [`skills/sddl/docs/migration-v1-to-v2.md`](skills/sddl/docs/migration-v1-to-v2.md)。
 
 ## 适用门槛
 
@@ -297,4 +321,4 @@ MIT License — 见 [LICENSE](LICENSE)
 ## 致谢
 
 - 方法论经过 3 轮评审循环（35 个问题关闭）+ 2 轮文献验证（arXiv 17 篇 + OpenSpec 实践）
-- Hermes Agent Skill 化版本经过 8 个分阶段命令 + 7 个测试场景验证
+- Hermes Agent Skill 化版本经过 10 个分阶段命令 + 场景自测（T1-T11）验证

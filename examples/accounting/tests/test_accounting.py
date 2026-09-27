@@ -3,6 +3,7 @@
 每个测试对应一个 behavior（标签仅作索引，C1-def L2 会反推断言）
 """
 import pytest
+from datetime import datetime
 from accounting_service import (
     createReconciliation, detectDiscrepancy, settle,
     createBudget, submitExpense, approveExpense, login,
@@ -13,6 +14,10 @@ from accounting_service import (
     UnauthorizedError, _store,
 )
 from accounting_service.models import LedgerEntry
+
+# submitExpense 按真实当前月匹配预算（_current_month），测试期间必须与之对齐，
+# 否则写死月份的用例会在跨月后静默失效（定时炸弹，2026-09 实测复现）
+_CURRENT_MONTH = datetime.utcnow().strftime("%Y-%m")
 
 
 @pytest.fixture(autouse=True)
@@ -124,7 +129,7 @@ def test_createBudget_valid():
 # ============================================================
 @pytest.mark.behavior("B008")
 def test_submitExpense_within_budget():
-    b = createBudget("cust1", "2026-08", 5000.0)
+    b = createBudget("cust1", _CURRENT_MONTH, 5000.0)
     e = submitExpense("cust1", 1000.0, "travel", "出差")
     assert e.status == "pending"
     assert b.used_amount == 1000.0
@@ -135,7 +140,7 @@ def test_submitExpense_within_budget():
 # ============================================================
 @pytest.mark.behavior("B009")
 def test_submitExpense_exceeds_budget():
-    b = createBudget("cust1", "2026-08", 5000.0)
+    b = createBudget("cust1", _CURRENT_MONTH, 5000.0)
     with pytest.raises(BudgetExceededError):
         submitExpense("cust1", 6000.0, "travel", "超预算")
     from accounting_service import _store
